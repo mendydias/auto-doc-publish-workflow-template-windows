@@ -44,11 +44,12 @@ def build(root: Path, document: str, profile: str | None, typography: str | None
     validation_errors = validate(root, manifest_path)
     if validation_errors:
         raise ValueError("\n".join(validation_errors))
-    if format_name != "all" and profile_config.get("formats") and format_name not in profile_config["formats"]:
+    supported_formats = profile_config.get("formats", list(FORMATS))
+    if format_name != "all" and format_name not in supported_formats:
         raise ValueError(f"Format '{format_name}' is not supported by profile '{profile}'")
     if profile == "ieee-conference":
         return _build_ieee(root, resolved, format_name, shared_defaults)
-    formats = FORMATS if format_name == "all" else (format_name,)
+    formats = tuple(supported_formats) if format_name == "all" else (format_name,)
     if check_dependencies(root, format_name):
         return 1
     sources = [root / item for item in manifest["sources"]]
@@ -57,6 +58,13 @@ def build(root: Path, document: str, profile: str | None, typography: str | None
     for output_format in formats:
         output_dir = base_output / output_format
         output_dir.mkdir(parents=True, exist_ok=True)
+        config_record = {
+            "document": document, "template": profile, "typography": typography,
+            "venue": resolved["venue"], "format": output_format,
+            "basename": resolved["output"], "supported_formats": list(supported_formats),
+            "metadata": manifest.get("metadata", {}),
+        }
+        (output_dir / "resolved-config.yaml").write_text(yaml.safe_dump(config_record, sort_keys=False), encoding="utf-8")
         basename = manifest["output"]
         extension = "tex" if output_format == "latex" else output_format
         output = output_dir / f"{basename}.{extension}"
