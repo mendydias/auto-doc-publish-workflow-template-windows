@@ -1,0 +1,10 @@
+% Narrow thesis support; retains Pandoc's standard LaTeX template.
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE,RO]{\thepage}
+\fancyhead[LO]{\nouppercase{\rightmark}}
+\fancyhead[RE]{\nouppercase{\leftmark}}
+\setlength{\headheight}{14pt}
+\providecommand{\frontmatter}{\pagenumbering{roman}\setcounter{page}{1}}
+\providecommand{\mainmatter}{\clearpage\pagenumbering{arabic}\setcounter{page}{1}}

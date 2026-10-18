@@ -1,0 +1,2 @@
+from: markdown+tex_math_dollars+raw_tex+fenced_divs+bracketed_spans
+standalone: true
