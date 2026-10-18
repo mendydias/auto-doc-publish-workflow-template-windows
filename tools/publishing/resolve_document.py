@@ -8,6 +8,8 @@ from typing import Any
 
 import yaml
 
+from .documents import load_document
+
 IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 SUPPORTED_FORMATS = {"pdf", "latex", "docx", "html", "epub"}
 MANIFEST_FIELDS = {"id", "basename", "output", "profile", "venue", "metadata", "bibliography", "sources", "title", "author", "date"}
@@ -48,6 +50,13 @@ def resolve_document(
         raise ValueError("Unknown document manifest field(s): " + ", ".join(sorted(unknown_manifest)))
     if "sources" not in manifest or not isinstance(manifest["sources"], list) or not manifest["sources"]:
         raise ValueError("Manifest sources must be a non-empty ordered list")
+    # When a unified authoring document exists, its section discovery/list is
+    # authoritative. Keep the legacy manifest for renderer/profile settings.
+    source_document = root / "sources" / document / "document.yaml"
+    if source_document.is_file():
+        author_document = load_document(root, document)
+        manifest = dict(manifest)
+        manifest["sources"] = [path.relative_to(root.resolve()).as_posix() for path in author_document["sections"]]
     output = manifest.get("basename", manifest.get("output"))
     if not isinstance(output, str) or not IDENTIFIER.fullmatch(output):
         raise ValueError("Manifest basename/output must be a safe alphanumeric name")

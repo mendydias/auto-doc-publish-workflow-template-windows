@@ -41,7 +41,7 @@ def build(root: Path, document: str, profile: str | None, typography: str | None
     shared_defaults = yaml.safe_load(defaults_path.read_text(encoding="utf-8")) or {}
     profile_config = resolved["profile_config"]
     typography_config = resolved["typography_config"]
-    validation_errors = validate(root, manifest_path)
+    validation_errors = validate(root, manifest_path, manifest["sources"])
     if validation_errors:
         raise ValueError("\n".join(validation_errors))
     supported_formats = profile_config.get("formats", list(FORMATS))

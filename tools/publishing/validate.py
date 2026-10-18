@@ -15,7 +15,7 @@ except ImportError:  # Allows --help to work before project dependencies are ins
     yaml = None
 
 
-def validate(root: Path, manifest_path: Path) -> list[str]:
+def validate(root: Path, manifest_path: Path, source_overrides: list[str] | None = None) -> list[str]:
     if yaml is None:
         return ["PyYAML is missing; create the project environment with .\\scripts\\setup.ps1"]
     errors: list[str] = []
@@ -25,6 +25,8 @@ def validate(root: Path, manifest_path: Path) -> list[str]:
         return [f"Invalid manifest: {error}"]
     if not isinstance(manifest, dict):
         return ["Manifest must contain a YAML mapping"]
+    if source_overrides is not None:
+        manifest = {**manifest, "sources": source_overrides}
     if not isinstance(manifest.get("sources"), list) or not manifest["sources"]:
         errors.append("Manifest sources must be a non-empty ordered list")
     external_metadata = {}
