@@ -73,7 +73,7 @@ def load_document(root: Path, document: str) -> dict[str, Any]:
             duplicates = sorted({number for number in numbers if numbers.count(number) > 1})
             if duplicates:
                 raise ValueError("Duplicate section number(s): " + ", ".join(map(str, duplicates)))
-            section_paths = [item[2].resolve() for item in sorted(numbered)]
+            section_paths = [_safe_file(folder, str(item[2].relative_to(folder)), "section") for item in sorted(numbered)]
         else:
             if not isinstance(explicit, list) or not explicit:
                 raise ValueError("sections must be a non-empty ordered list")
