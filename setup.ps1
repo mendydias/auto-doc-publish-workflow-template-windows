@@ -36,17 +36,38 @@ try {
         throw 'Run unattended setup as a standard user; this script will not install machine-wide packages or elevate.'
     }
 
-    $python = Get-Command python.exe -ErrorAction SilentlyContinue
-    if (-not $python) {
-        $arguments = @('install','--id','Python.Python.3.12','--exact','--scope','user','--silent')
+    $packages = @(
+        @{ Id = 'Python.Python.3.12'; Command = 'python.exe' },
+        @{ Id = 'Microsoft.PowerShell'; Command = 'pwsh.exe' },
+        @{ Id = 'JohnMacFarlane.Pandoc'; Command = 'pandoc.exe' },
+        @{ Id = 'MiKTeX.MiKTeX'; Command = 'lualatex.exe' },
+        @{ Id = 'StrawberryPerl.StrawberryPerl'; Command = 'perl.exe' }
+    )
+    foreach ($package in $packages) {
+        $existing = Get-Command $package.Command -ErrorAction SilentlyContinue
+        if ($existing) {
+            Write-Host "Reusing $($package.Id): $($existing.Source)"
+            continue
+        }
+        $arguments = @('install','--id',$package.Id,'--exact','--scope','user','--silent')
         if ($agreementsAccepted) { $arguments += @('--accept-package-agreements','--accept-source-agreements') }
         if ($unattended) { $arguments += '--disable-interactivity' }
         & $winget.Source @arguments
-        if ($LASTEXITCODE -ne 0) { throw "WinGet failed to install Python (exit $LASTEXITCODE). See $log" }
-    } else {
-        Write-Host "Reusing Python at $($python.Source)"
+        if ($LASTEXITCODE -ne 0) { throw "WinGet failed to install $($package.Id) (exit $LASTEXITCODE). See $log" }
     }
-    Write-Host "Bootstrap completed. Diagnostics: $log"
+
+    $env:Path = "$env:LOCALAPPDATA\Programs\Python\Python312;$env:LOCALAPPDATA\Programs\Python\Python312\Scripts;$env:ProgramFiles\MiKTeX\miktex\bin\x64;$env:LOCALAPPDATA\Programs\MiKTeX\miktex\bin\x64;$env:LOCALAPPDATA\Programs\PowerShell\7;$env:Path"
+    $python = Get-Command python.exe -ErrorAction SilentlyContinue
+    if (-not $python) { throw 'Python installation completed but python.exe is not discoverable; restart the terminal and rerun setup.' }
+    $venv = Join-Path $root '.venv'
+    $venvPython = Join-Path $venv 'Scripts/python.exe'
+    if (-not (Test-Path -LiteralPath $venvPython)) {
+        & $python.Source -m venv $venv
+        if ($LASTEXITCODE -ne 0) { throw "Could not create project virtual environment (exit $LASTEXITCODE)." }
+    }
+    & $venvPython -m pip install --disable-pip-version-check -e '.[dev]'
+    if ($LASTEXITCODE -ne 0) { throw "Pinned Python dependencies could not be installed (exit $LASTEXITCODE)." }
+    Write-Host "Toolchain provisioning completed. Diagnostics: $log"
 } catch {
     [Console]::Error.WriteLine("SETUP FAILED: $($_.Exception.Message)")
     [Console]::Error.WriteLine("Diagnostics: $log")
