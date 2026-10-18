@@ -1,0 +1,3 @@
+# Shared Pandoc options only. Publication-specific formatting belongs in profiles.
+from: markdown+tex_math_dollars+raw_tex+fenced_divs+bracketed_spans
+standalone: true
