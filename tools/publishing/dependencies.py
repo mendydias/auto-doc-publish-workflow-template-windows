@@ -29,7 +29,7 @@ def check_dependencies(root: Path, format_name: str) -> int:
     if any(item in formats for item in ("pdf", "latex", "docx", "html", "epub")):
         required.append("pandoc-crossref")
     if "pdf" in formats:
-        required.extend(PDF_TOOLS)
+        required.extend([*PDF_TOOLS, "perl"])
     failed = False
     versions: dict[str, str] = {}
     for name in dict.fromkeys(required):

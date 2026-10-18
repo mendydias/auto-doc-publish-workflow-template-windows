@@ -11,13 +11,14 @@ from .clean import clean
 from .dependencies import check_dependencies
 from .validate import lint, validate
 from .watch import watch
+from .handoff import generate as generate_handoff
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description="Build and validate academic Markdown publications.")
-    result.add_argument("--action", choices=["Check", "Build", "Lint", "Test", "Watch", "Clean"], default="Build")
+    result.add_argument("--action", choices=["Check", "Build", "Lint", "Test", "Watch", "Clean", "Handoff"], default="Build")
     result.add_argument("--document", default="example")
     result.add_argument("--profile", choices=["article", "report", "thesis"], default="article")
     result.add_argument("--typography", choices=["default", "academic", "compact"], default="default")
@@ -41,6 +42,8 @@ def main(argv: list[str] | None = None) -> int:
             return watch(ROOT, args.document, args.profile, args.typography, args.format)
         if args.action == "Clean":
             return clean(ROOT)
+        if args.action == "Handoff":
+            return generate_handoff(ROOT)
     except (ValueError, OSError, RuntimeError) as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2

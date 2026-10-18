@@ -4,7 +4,7 @@ Build or manage academic Markdown publications.
 .DESCRIPTION
 PowerShell front end for the shared Python publisher. Paths resolve from this script, not the caller's directory.
 .PARAMETER Action
-Check, Build (default), Lint, Test, Watch, or Clean.
+Check, Build (default), Lint, Test, Watch, Clean, or Handoff.
 .PARAMETER Document
 Document manifest name, default example.
 .PARAMETER Profile
@@ -18,7 +18,7 @@ pwsh -NoProfile -File .\publish.ps1 -Action Build -Document example -Profile art
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('Check','Build','Lint','Test','Watch','Clean')]
+    [ValidateSet('Check','Build','Lint','Test','Watch','Clean','Handoff')]
     [string] $Action = 'Build',
     [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9_-]*$')]
     [string] $Document = 'example',
