@@ -36,7 +36,7 @@ try {
         @{ Id = 'Python.Python.3.12'; Command = 'python.exe' },
         @{ Id = 'Microsoft.PowerShell'; Command = 'pwsh.exe' },
         @{ Id = 'JohnMacFarlane.Pandoc'; Command = 'pandoc.exe' },
-        @{ Id = 'MiKTeX.MiKTeX'; Command = 'lualatex.exe' },
+        @{ Id = 'MiKTeX.MiKTeX'; Command = 'lualatex.exe'; Override = '--unattended' },
         @{ Id = 'StrawberryPerl.StrawberryPerl'; Command = 'perl.exe'; Scope = 'machine' }
     )
     foreach ($package in $packages) {
@@ -47,7 +47,12 @@ try {
         }
         $scope = 'user'
         if ($package.ContainsKey('Scope')) { $scope = $package.Scope }
-        $arguments = @('install','--id',$package.Id,'--exact','--scope',$scope,'--silent')
+        $arguments = @('install','--id',$package.Id,'--exact','--scope',$scope)
+        if ($package.ContainsKey('Override')) {
+            $arguments += @('--override',$package.Override)
+        } else {
+            $arguments += '--silent'
+        }
         if ($agreementsAccepted) { $arguments += @('--accept-package-agreements','--accept-source-agreements') }
         if ($unattended) { $arguments += '--disable-interactivity' }
         & $winget.Source @arguments
