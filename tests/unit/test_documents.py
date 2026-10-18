@@ -5,12 +5,20 @@ import pytest
 from tools.publishing.documents import discover_documents, load_document
 
 
-def test_discovery_includes_new_and_legacy_documents(tmp_path: Path) -> None:
+def test_discovery_only_includes_source_documents(tmp_path: Path) -> None:
     (tmp_path / "sources/new").mkdir(parents=True)
     (tmp_path / "sources/new/document.yaml").write_text("title: New\n", encoding="utf-8")
     (tmp_path / "config/documents").mkdir(parents=True)
     (tmp_path / "config/documents/old.yaml").write_text("sources: []\n", encoding="utf-8")
-    assert discover_documents(tmp_path) == ["new", "old"]
+    assert discover_documents(tmp_path) == ["new"]
+
+
+def test_legacy_only_document_gets_actionable_error(tmp_path: Path) -> None:
+    legacy = tmp_path / "config/documents"
+    legacy.mkdir(parents=True)
+    (legacy / "old.yaml").write_text("sources: []\n", encoding="utf-8")
+    with pytest.raises(ValueError, match=r"Create sources/old/document.yaml"):
+        load_document(tmp_path, "old")
 
 
 def test_new_document_orders_numbered_sections_and_resolves_resources(tmp_path: Path) -> None:

@@ -8,26 +8,30 @@ from pathlib import Path
 from .build import build
 
 
-def watched_files(root: Path, manifest: Path | None = None) -> list[Path]:
-    """Return tracked project inputs; build/cache paths are deliberately excluded."""
-    inputs = [root / "sources", root / "references", root / "assets", root / "templates", root / "config"]
-    paths = {manifest} if manifest is not None and manifest.is_file() else set()
+def watched_files(root: Path, document: str | None = None) -> list[Path]:
+    """Return author inputs and shared renderer configuration, excluding outputs."""
+    inputs = [root / "templates", root / "config"]
+    if document is None:
+        inputs.append(root / "sources")
+    else:
+        inputs.append(root / "sources" / document)
+    paths: set[Path] = set()
     for directory in inputs:
         if directory.exists():
             paths.update(path for path in directory.rglob("*") if path.is_file())
     return sorted(paths)
 
 
-def _snapshot(root: Path, manifest: Path | None = None) -> dict[Path, int]:
-    return {path: path.stat().st_mtime_ns for path in watched_files(root, manifest)}
+def _snapshot(root: Path, document: str | None = None) -> dict[Path, tuple[int, int]]:
+    return {path: (path.stat().st_mtime_ns, path.stat().st_size) for path in watched_files(root, document)}
 
 
-def wait_for_quiet(root: Path, manifest: Path | None, state: dict[Path, int], quiet_period: float = 0.6) -> dict[Path, int]:
+def wait_for_quiet(root: Path, document: str | None, state: dict[Path, tuple[int, int]], quiet_period: float = 0.6) -> dict[Path, tuple[int, int]]:
     """Wait until changes stop for a full debounce interval, updating the snapshot."""
     quiet_until = time.monotonic() + quiet_period
     while True:
         time.sleep(0.1)
-        refreshed = _snapshot(root, manifest)
+        refreshed = _snapshot(root, document)
         if refreshed != state:
             state = refreshed
             quiet_until = time.monotonic() + quiet_period
@@ -36,20 +40,25 @@ def wait_for_quiet(root: Path, manifest: Path | None, state: dict[Path, int], qu
 
 
 def watch(root: Path, document: str, profile: str | None, typography: str | None, format_name: str, venue: str | None = None) -> int:
-    manifest = root / "config/documents" / f"{document}.yaml"
-    state = _snapshot(root, manifest)
-    print("Watching sources (Ctrl+C to stop)")
+    state = _snapshot(root, document)
+    print(f"Watching sources/{document} and shared renderer configuration (Ctrl+C to stop)")
     try:
         while True:
             time.sleep(0.4)
             changed = False
-            current = _snapshot(root, manifest)
+            current = _snapshot(root, document)
             changed = current != state
             state = current
             if changed:
-                state = wait_for_quiet(root, manifest, state)
+                state = wait_for_quiet(root, document, state)
                 print("Change detected; rebuilding")
-                build(root, document, profile, typography, format_name, venue)
+                try:
+                    result = build(root, document, profile, typography, format_name, venue)
+                except (ValueError, OSError, RuntimeError) as error:
+                    print(f"Rebuild failed: {error}")
+                else:
+                    if result:
+                        print(f"Rebuild failed with exit code {result}")
     except KeyboardInterrupt:
         print("Watch stopped")
         return 0

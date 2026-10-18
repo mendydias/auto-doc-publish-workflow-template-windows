@@ -1,8 +1,4 @@
-"""Discover and normalize documents in the unified sources layout.
-
-Legacy config/documents manifests are exposed through the same normalized
-shape while the repository migrates its examples.
-"""
+"""Discover and normalize documents in the unified sources layout."""
 
 from __future__ import annotations
 
@@ -17,9 +13,8 @@ SECTION_NUMBER = re.compile(r"^(\d+)-.+\.md$", re.IGNORECASE)
 
 
 def discover_documents(root: Path) -> list[str]:
-    """Return safe document IDs from new and legacy document locations."""
+    """Return safe document IDs from the author-facing sources directory."""
     found = {path.parent.name for path in (root / "sources").glob("*/document.yaml")}
-    found.update(path.stem for path in (root / "config/documents").glob("*.yaml"))
     return sorted(name for name in found if IDENTIFIER.fullmatch(name))
 
 
@@ -109,42 +104,7 @@ def load_document(root: Path, document: str) -> dict[str, Any]:
             "metadata_file": document_file.resolve(), "resource_base": folder.resolve(),
         }
 
-    manifest_path = root / "config/documents" / f"{document}.yaml"
-    if not manifest_path.is_file():
-        raise ValueError(f"Document not found: {document}")
-    manifest = _yaml_mapping(manifest_path, "legacy document manifest")
-    allowed_legacy = {
-        "id", "basename", "output", "profile", "template", "venue", "typography",
-        "metadata", "bibliography", "sources", "title", "author", "authors", "date",
-        "abstract", "keywords",
-    }
-    unknown = set(manifest) - allowed_legacy
-    if unknown:
-        raise ValueError("Unknown legacy document field(s): " + ", ".join(sorted(unknown)))
-    sources = manifest.get("sources")
-    if not isinstance(sources, list) or not sources:
-        raise ValueError("Legacy manifest sources must be a non-empty ordered list")
-    paths = [_safe_file(root, item, "source") for item in sources]
-    bibliography = manifest.get("bibliography", [])
-    if isinstance(bibliography, str):
-        bibliography = [bibliography]
-    if not isinstance(bibliography, list):
-        raise ValueError("Legacy bibliography must be a path or ordered list")
-    bib_paths = [_safe_file(root, item, "bibliography") for item in bibliography]
-    metadata_file = manifest.get("metadata") if isinstance(manifest.get("metadata"), str) else None
-    metadata_values = _yaml_mapping(_safe_file(root, metadata_file, "metadata"), "document metadata") if metadata_file else {}
-    metadata_values = {**metadata_values, **(manifest.get("metadata") if isinstance(manifest.get("metadata"), dict) else {})}
-    authors = manifest.get("authors", manifest.get("author", metadata_values.get("authors", metadata_values.get("author", []))))
-    if isinstance(authors, str):
-        authors = [{"name": authors}]
-    return {
-        "id": document, "folder": root.resolve(), "metadata": manifest,
-        "authors": authors, "sections": paths,
-        "bibliography": bib_paths, "assets": [],
-        "template": manifest.get("template", manifest.get("profile")),
-        "typography": manifest.get("typography"), "venue": manifest.get("venue"),
-        "basename": manifest.get("basename", manifest.get("output", document)), "legacy": True,
-        "metadata_values": metadata_values,
-        "metadata_file": (root / metadata_file).resolve() if metadata_file else None,
-        "resource_base": root.resolve(),
-    }
+    raise ValueError(
+        f"Document not found in sources/{document}/. Create sources/{document}/document.yaml; "
+        "legacy config/documents manifests are no longer supported."
+    )
