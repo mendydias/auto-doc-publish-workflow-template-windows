@@ -4,7 +4,7 @@
 
 Thesis numbering is chapter-aware; the cross-file figure is @fig:thesis-example.
 
-![Thesis diagram](../../assets/workflow.svg){#fig:thesis-example}
+![Thesis diagram](assets/workflow.svg){#fig:thesis-example}
 
 ## Approach
 
