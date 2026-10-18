@@ -1,6 +1,6 @@
-# Windows Academic Markdown Publisher
+# Academic Markdown Publisher
 
-A PowerShell 7+ interface and Python orchestration layer for ordered academic Markdown documents. This is a Windows-first project; it does not use WSL, containers, Bash, Make, or Unix build utilities.
+A PowerShell 7+ interface and Python orchestration layer for ordered academic Markdown publications. The existing Windows-first launcher is preserved; the Python CLI can also be used directly on other platforms. YAML manifests select content, publication profiles control formatting and tools, and venue configurations describe submission checks.
 
 ## Requirements
 
@@ -36,15 +36,17 @@ pwsh -NoProfile -File .\publish.ps1 -Action Watch
 pwsh -NoProfile -File .\publish.ps1 -Action Clean
 ```
 
-The public defaults are Build, PDF, document `example`, profile `article`, and typography `default`. Formats are `pdf`, `latex`, `docx`, `html`, `epub`, and `all`. `all` shares one orchestrator and emits each format into its own directory. Only PDF invokes LuaLaTeX. `publish.ps1 -?` shows PowerShell help; Python also provides `python -m tools.publishing --help`.
+The public defaults are Build, PDF, and document `example`. Profile and typography default from the manifest/profile, respectively (the generic project fallback remains `article` and `default`). Formats are `pdf`, `latex`, `docx`, `html`, `epub`, and `all`; availability is profile-specific. `publish.ps1 -?` shows PowerShell help; Python also provides `python -m tools.publishing --help`.
 
 The project root is resolved from the entry point, not the current directory. Manifest paths are repository-relative. Output paths are `build/<document>/<profile>/<typography>/<format>/`; generated TeX, caches, temporary files, and logs stay under ignored `build/`. Source files are never rewritten.
 
 ## Documents and profiles
 
-YAML manifests in `config/documents/` declare an ordered `sources` list, metadata, bibliography, and safe output basename. Ordering is preserved exactly. Profile configuration in `config/profiles/` controls document structure; typography in `config/typography/` controls LaTeX appearance independently. Format settings are isolated in `config/formats/`.
+YAML manifests in `config/documents/` declare an ordered `sources` list, metadata, bibliography, and safe output basename. Ordering is preserved exactly. Profile configuration in `config/profiles/` controls document structure and engines; typography in `config/typography/` controls LaTeX appearance independently. Format settings are isolated in `config/formats/`. The `ieee-example` manifest selects its IEEE profile and illustrative venue without script edits.
 
-Profiles: `article`, `report`, `thesis`. Typography: `default`, `academic`, `compact`. Add sources/resources with repository-relative paths and commit intentional assets. Keep generated artifacts under `build/`.
+Profiles: `article`, `report`, `thesis`, `ieee-conference`. Typography: `default`, `academic`, `compact`, `ieee`. The IEEE profile permits only class-controlled `ieee` typography. Add sources/resources with repository-relative paths and commit intentional assets. Keep generated artifacts under `build/`.
+
+See [the IEEE authoring walkthrough](docs/ieee-authoring.md) for its metadata schema, standalone LaTeX/PDF builds, validation, and submission source bundle.
 
 The thesis profile uses front matter, Roman numbering before `\mainmatter`, Arabic numbering thereafter, chapter-aware cross-reference numbering from pandoc-crossref, and appendices. The thesis uses the standard Pandoc LaTeX template with narrow header includes rather than a wholesale template replacement. Non-LaTeX renderers do not promise identical pagination or thesis front matter: raw TeX commands and page furniture are LaTeX-specific; HTML/EPUB reflow and DOCX uses Word styles.
 
