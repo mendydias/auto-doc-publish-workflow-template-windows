@@ -8,7 +8,7 @@ Verified in the Linux development environment on 2026-10-18:
   equations, cross-references, captions, and embedded fonts resolved.
 - Illustrative venue checks reported US Letter, page count, and embedded fonts.
 - Submission ZIP rebuilt independently from an extracted temporary directory.
-- Python tests: 41 passed, one Windows-only test skipped. Ruff and Markdown
+- Python tests: 42 passed, one Windows-only test skipped. Ruff and Markdown
   lint passed.
 
 The generated PDF, intermediate LaTeX/log files, resolved build configuration,
