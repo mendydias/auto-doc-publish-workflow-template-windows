@@ -57,21 +57,18 @@ and image paths relative to the document folder. See
 `sources/` for examples. IEEE documents additionally require an abstract,
 keywords, and author affiliations.
 
-**Publishing limitation:** the unified `sources/<id>/` layout and its loader
-are not yet wired into the build, validation, or submission commands. Those
-commands still require a legacy `config/documents/<id>.yaml` manifest. No such
-manifests are currently shipped in this repository, so the example source
-folders are authoring examples, not currently buildable publications. See
-[`docs/configuration.md`](docs/configuration.md) for the migration status.
+The unified `sources/<id>/` layout is used by build, validation, lint, watch,
+and submission commands. Legacy `config/documents/<id>.yaml` documents remain
+supported when no unified document folder exists; when both are present, the
+unified document is authoritative. See
+[`docs/configuration.md`](docs/configuration.md) for details.
 
 ## Publishing
 
 The intended default format is PDF; template restrictions and defaults are
-applied during validation. For documents supported by the current legacy
-renderer, artifacts and diagnostics are kept under
+applied during validation. Artifacts and diagnostics are kept under
 `build/<document>/<template>/<typography>/<format>/`. Generated files are not
-source files and can be recreated at any time. The source examples in this
-checkout cannot yet be published with these commands; see the limitation above.
+source files and can be recreated at any time.
 
 For automation, provide choices through environment variables; scripts do
 not prompt in CI or when stdin is redirected:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -15,33 +16,44 @@ except ImportError:  # Allows --help to work before project dependencies are ins
     yaml = None
 
 
-def validate(root: Path, manifest_path: Path, source_overrides: list[str] | None = None) -> list[str]:
+def validate(root: Path, manifest_path: Path | dict, source_overrides: list[str] | None = None) -> list[str]:
     if yaml is None:
         return ["PyYAML is missing; create the project environment with .\\scripts\\setup.ps1"]
     errors: list[str] = []
-    try:
-        manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, yaml.YAMLError) as error:
-        return [f"Invalid manifest: {error}"]
-    if not isinstance(manifest, dict):
-        return ["Manifest must contain a YAML mapping"]
+    if isinstance(manifest_path, dict):
+        manifest = dict(manifest_path)
+    else:
+        try:
+            manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, yaml.YAMLError) as error:
+            return [f"Invalid manifest: {error}"]
+        if not isinstance(manifest, dict):
+            return ["Manifest must contain a YAML mapping"]
+        if isinstance(manifest.get("metadata"), str):
+            manifest = {**manifest, "metadata_file": manifest["metadata"], "metadata": {}}
     if source_overrides is not None:
         manifest = {**manifest, "sources": source_overrides}
     if not isinstance(manifest.get("sources"), list) or not manifest["sources"]:
         errors.append("Manifest sources must be a non-empty ordered list")
     external_metadata = {}
-    if isinstance(manifest.get("metadata"), str):
-        metadata_path = (root / manifest["metadata"]).resolve()
+    if isinstance(manifest.get("metadata_file"), str):
+        metadata_path = (root / manifest["metadata_file"]).resolve()
         if not metadata_path.is_relative_to(root.resolve()) or not metadata_path.is_file():
-            errors.append(f"Missing or unsafe metadata file: {manifest['metadata']}")
+            errors.append(f"Missing or unsafe metadata file: {manifest['metadata_file']}")
         else:
             try:
                 external_metadata = yaml.safe_load(metadata_path.read_text(encoding="utf-8")) or {}
             except yaml.YAMLError as error:
                 errors.append(f"Invalid metadata YAML: {error}")
-    if not isinstance(manifest.get("title", external_metadata.get("title")), str) or not manifest.get("title", external_metadata.get("title", "")).strip():
+            if not isinstance(external_metadata, dict):
+                errors.append(f"Metadata file must contain a YAML mapping: {manifest['metadata_file']}")
+                external_metadata = {}
+    metadata_values = manifest.get("metadata", {}) if isinstance(manifest.get("metadata"), dict) else {}
+    title = manifest.get("title", metadata_values.get("title", external_metadata.get("title")))
+    authors = manifest.get("authors", manifest.get("author", metadata_values.get("authors", external_metadata.get("authors", external_metadata.get("author")))))
+    if not isinstance(title, str) or not title.strip():
         errors.append("Manifest requires a non-empty title")
-    if not isinstance(manifest.get("author", external_metadata.get("author", external_metadata.get("authors"))), (str, list)) or not manifest.get("author", external_metadata.get("author", external_metadata.get("authors"))):
+    if not isinstance(authors, (str, list)) or not authors:
         errors.append("Manifest requires an author string or ordered author list")
     if not isinstance(manifest.get("metadata", {}), (dict, str)):
         errors.append("Manifest metadata must be a YAML mapping")
@@ -53,7 +65,7 @@ def validate(root: Path, manifest_path: Path, source_overrides: list[str] | None
     if not isinstance(bibliography, list):
         errors.append("Manifest bibliography must be a path or list of paths")
         bibliography = []
-    for rel in [*manifest.get("sources", []), *bibliography, *([manifest["metadata"]] if isinstance(manifest.get("metadata"), str) else [])]:
+    for rel in [*manifest.get("sources", []), *bibliography, *manifest.get("assets", []), *([manifest["metadata_file"]] if isinstance(manifest.get("metadata_file"), str) else [])]:
         if not isinstance(rel, str):
             errors.append(f"Manifest path must be a string: {rel!r}")
             continue
@@ -68,7 +80,7 @@ def validate(root: Path, manifest_path: Path, source_overrides: list[str] | None
         return ["Pandoc is required for AST validation"]
     source_paths = [root / rel for rel in manifest["sources"]]
     ast_process = subprocess.run(
-        [shutil.which("pandoc") or "pandoc", *map(str, source_paths), "--from", "markdown+tex_math_dollars+raw_tex+fenced_divs+bracketed_spans", "--to", "json", "--resource-path", str(root)],
+        [shutil.which("pandoc") or "pandoc", *map(str, source_paths), "--from", "markdown+tex_math_dollars+raw_tex+fenced_divs+bracketed_spans", "--to", "json", "--resource-path", _resource_path(root, manifest)],
         cwd=root, capture_output=True, text=True, check=False,
     )
     if ast_process.returncode:
@@ -118,8 +130,13 @@ def validate(root: Path, manifest_path: Path, source_overrides: list[str] | None
     for target in resources:
         if not target or re.match(r"^(?:https?:|data:|#)", target, re.I):
             continue
-        resource = (root / target).resolve()
-        if not resource.is_relative_to(root.resolve()) or not resource.is_file():
+        candidates = _resource_candidates(root, manifest, source_paths, target)
+        resource = next((candidate for candidate in candidates if candidate.is_file()), None)
+        allowed = [root.resolve()]
+        resource_base = manifest.get("resource_base")
+        if isinstance(resource_base, str):
+            allowed.append((root / resource_base).resolve())
+        if resource is None or not any(resource.is_relative_to(base) for base in allowed):
             errors.append(f"Missing or unsafe resource: {target}")
     if bibliography:
         try:
@@ -138,11 +155,40 @@ def validate(root: Path, manifest_path: Path, source_overrides: list[str] | None
     return errors
 
 
+def _resource_candidates(root: Path, manifest: dict, sources: list[Path], target: str) -> list[Path]:
+    path = Path(target)
+    if path.is_absolute():
+        return [path.resolve()]
+    candidates = [source.parent / path for source in sources]
+    base = manifest.get("resource_base")
+    if isinstance(base, str):
+        candidates.append(root / base / path)
+    candidates.append(root / path)
+    return [candidate.resolve() for candidate in candidates]
+
+
+def _resource_path(root: Path, manifest: dict) -> str:
+    bases = [root.resolve()]
+    base = manifest.get("resource_base")
+    if isinstance(base, str):
+        bases.append((root / base).resolve())
+    bases.extend((root / source).resolve().parent for source in manifest.get("sources", []))
+    return os.pathsep.join(dict.fromkeys(map(str, bases)))
+
+
 def lint(root: Path) -> int:
+    from .documents import discover_documents
+    from .resolve_document import resolve_document
+
     errors = []
-    for manifest in sorted((root / "config/documents").glob("*.yaml")):
-        for error in validate(root, manifest):
-            errors.append(f"{manifest.name}: {error}")
+    for document in discover_documents(root):
+        try:
+            resolved = resolve_document(root, document)
+        except (ValueError, OSError) as error:
+            errors.append(f"{document}: {error}")
+            continue
+        for error in validate(root, resolved["manifest"]):
+            errors.append(f"{document}: {error}")
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1

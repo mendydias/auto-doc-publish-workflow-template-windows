@@ -11,17 +11,17 @@ relative to the document folder and must not escape it. See
 [the authoring contract](authoring-contract.md) for the shared schema and
 template-specific metadata requirements.
 
-The checked-in `sources/` examples are in the new layout. The Python document
-loader can discover and validate them. **The main build, validation, and
-submission commands still consume legacy `config/documents/<id>.yaml`
-manifests**; migration of those renderers is pending. Avoid deleting legacy
-manifests until the renderer migration lands.
+All publishing commands consume the normalized document model. A unified
+`sources/<id>/document.yaml` is authoritative when present; otherwise the
+loader adapts a legacy `config/documents/<id>.yaml` manifest. Unified resource
+paths are relative to the document folder, while legacy manifest paths remain
+repository-relative. Do not maintain competing metadata in both layouts.
 
 ## Shared publishing configuration
 
 | Location | Owns |
 |---|---|
-| `config/profiles/<id>.yaml` | Legacy renderer's document class/options, structure, numbering, template, LaTeX engine, bibliography processor/style, typography defaults/allowlist, supported formats, restrictions |
+| `config/profiles/<id>.yaml` | Document class/options, structure, numbering, LaTeX engine, bibliography processor/style, typography defaults/allowlist, supported formats, restrictions |
 | `config/venues/<id>.yaml` | Illustrative flag, page size/count, anonymity, named submission checks |
 | `config/typography/<id>.yaml` | Typography preset; class-controlled mode delegates layout to the class |
 | `config/formats/<format>.yaml` | Renderer options isolated by output format |

@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+import os
 
 import yaml
 
@@ -34,14 +35,13 @@ def build(root: Path, document: str, profile: str | None, typography: str | None
     manifest = resolved["manifest"]
     profile = resolved["profile"]
     typography = resolved["typography"]
-    manifest_path = root / "config/documents" / f"{document}.yaml"
     defaults_path = root / "config/defaults/common.yaml"
     if not defaults_path.is_file():
         defaults_path = root / "config/pandoc.yaml"
     shared_defaults = yaml.safe_load(defaults_path.read_text(encoding="utf-8")) or {}
     profile_config = resolved["profile_config"]
     typography_config = resolved["typography_config"]
-    validation_errors = validate(root, manifest_path, manifest["sources"])
+    validation_errors = validate(root, manifest)
     if validation_errors:
         raise ValueError("\n".join(validation_errors))
     supported_formats = profile_config.get("formats", list(FORMATS))
@@ -53,7 +53,8 @@ def build(root: Path, document: str, profile: str | None, typography: str | None
     if check_dependencies(root, format_name):
         return 1
     sources = [root / item for item in manifest["sources"]]
-    bibliography = manifest.get("bibliography")
+    bibliography = manifest.get("bibliography", [])
+    bibliography = [bibliography] if isinstance(bibliography, str) else bibliography
     base_output = root / "build" / document / profile / typography
     for output_format in formats:
         output_dir = base_output / output_format
@@ -65,7 +66,7 @@ def build(root: Path, document: str, profile: str | None, typography: str | None
             "metadata": manifest.get("metadata", {}),
         }
         (output_dir / "resolved-config.yaml").write_text(yaml.safe_dump(config_record, sort_keys=False), encoding="utf-8")
-        basename = manifest["output"]
+        basename = resolved["output"]
         extension = "tex" if output_format == "latex" else output_format
         output = output_dir / f"{basename}.{extension}"
         args = [shutil.which("pandoc") or "pandoc", *map(str, sources)]
@@ -76,7 +77,8 @@ def build(root: Path, document: str, profile: str | None, typography: str | None
                     args.append(f"--{option}")
             else:
                 args += [f"--{option}", str(value)]
-        args += ["--to", "latex" if output_format in ("latex", "pdf") else output_format, "--output", str(output), "--resource-path", str(root)]
+        resource_paths = [root.resolve(), (root / manifest["resource_base"]).resolve(), *(source.resolve().parent for source in sources)]
+        args += ["--to", "latex" if output_format in ("latex", "pdf") else output_format, "--output", str(output), "--resource-path", os.pathsep.join(dict.fromkeys(map(str, resource_paths)))]
         format_defaults = yaml.safe_load((root / "config/formats" / f"{output_format}.yaml").read_text(encoding="utf-8")) or {}
         latex_settings = {**profile_config, **typography_config} if output_format in ("pdf", "latex") else {}
         for key, value in {**format_defaults, **latex_settings}.items():
@@ -114,13 +116,16 @@ def build(root: Path, document: str, profile: str | None, typography: str | None
             args += ["--pdf-engine", "lualatex"]
         if output_format in ("pdf", "latex"):
             args += ["--lua-filter", str(root / "templates/latex/svg-to-pdf.lua"), "--include-in-header", str(root / "templates/latex/typography.tex")]
-        for key in ("title", "author", "date"):
+        metadata = dict(manifest.get("metadata", {}))
+        for key in ("title", "author", "authors", "date", "abstract", "keywords"):
             if manifest.get(key) is not None:
-                args += ["--metadata", f"{key}={manifest[key]}"]
-        for key, value in manifest.get("metadata", {}).items():
-            args += ["--metadata", f"{key}={value}"]
+                metadata[key] = manifest[key]
+        metadata_file = output_dir / "pandoc-metadata.yaml"
+        metadata_file.write_text(yaml.safe_dump(metadata, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        args += ["--metadata-file", str(metadata_file)]
         if bibliography:
-            args += ["--bibliography", str(root / bibliography)]
+            for bibliography_path in bibliography:
+                args += ["--bibliography", str(root / bibliography_path)]
             csl = root / "references/apa.csl"
             if csl.is_file():
                 args += ["--csl", str(csl)]
@@ -176,9 +181,16 @@ def _build_ieee(root: Path, resolved: dict, format_name: str, shared_defaults: d
     for key, value in shared_defaults.items():
         if key in {"from", "standalone"}:
             args += [f"--{key}", str(value)] if key == "from" else ["--standalone"]
-    args += ["--to", "latex", "--template", str(root / profile["template"]), "--output", str(tex_output), "--resource-path", str(root)]
-    if manifest.get("metadata"):
-        args += ["--metadata-file", str(root / manifest["metadata"])]
+    sources = [root / source for source in manifest["sources"]]
+    resource_paths = [root.resolve(), (root / manifest["resource_base"]).resolve(), *(source.resolve().parent for source in sources)]
+    args += ["--to", "latex", "--template", str(root / profile["template"]), "--output", str(tex_output), "--resource-path", os.pathsep.join(dict.fromkeys(map(str, resource_paths)))]
+    metadata = dict(manifest.get("metadata", {}))
+    for key in ("title", "author", "authors", "date", "abstract", "keywords"):
+        if manifest.get(key) is not None:
+            metadata[key] = manifest[key]
+    metadata_file = output_dir / "pandoc-metadata.yaml"
+    metadata_file.write_text(yaml.safe_dump(metadata, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    args += ["--metadata-file", str(metadata_file)]
     args += ["--variable", f"documentclass={profile.get('documentclass', 'IEEEtran')}"]
     args += ["--variable", "float-placement=b"]
     for option in profile.get("classoption", []):

@@ -19,6 +19,15 @@ def test_watch_excludes_outputs_and_cache(tmp_path: Path) -> None:
     assert all("build" not in path.parts for path in paths)
 
 
+def test_watch_tracks_unified_sources_without_legacy_manifest(tmp_path: Path) -> None:
+    document = tmp_path / "sources/paper"
+    document.mkdir(parents=True)
+    source = document / "document.yaml"
+    source.write_text("title: Paper", encoding="utf-8")
+    assert source in watched_files(tmp_path)
+    assert watch_module._snapshot(tmp_path)[source] == source.stat().st_mtime_ns
+
+
 def test_watch_debounces_until_quiet(monkeypatch, tmp_path: Path) -> None:
     clock = [0.0]
     snapshots = iter([{"source": 2}, {"source": 2}, {"source": 2}, {"source": 2}])

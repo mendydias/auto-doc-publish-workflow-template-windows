@@ -28,11 +28,9 @@ def resolve_options(args: object, environ: dict[str, str] | None = None) -> Publ
 
     alias = getattr(args, "profile", None)
     template = getattr(args, "template", None)
-    env_template = env.get("PUBLISH_TEMPLATE")
     if alias and template and alias != template:
         raise ValueError("--profile and --template conflict; use one template selection")
-    if alias and env_template and alias != env_template and template is None:
-        raise ValueError("--profile conflicts with PUBLISH_TEMPLATE")
+    env_template = env.get("PUBLISH_TEMPLATE")
     selected_template = template or alias or env_template
     action = choose("action", "PUBLISH_ACTION", "Build")
     format_name = choose("format", "PUBLISH_FORMAT", "pdf")

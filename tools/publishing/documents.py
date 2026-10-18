@@ -45,10 +45,12 @@ def _yaml_mapping(path: Path, label: str) -> dict[str, Any]:
 
 
 def load_document(root: Path, document: str) -> dict[str, Any]:
-    """Load a document into a common model with resolved source/resource paths."""
+    """Load a document into one model; unified documents take precedence."""
     if not IDENTIFIER.fullmatch(document):
         raise ValueError(f"Invalid document identifier: {document!r}")
     folder = root / "sources" / document
+    if folder.exists() and not folder.resolve().is_relative_to(root.resolve()):
+        raise ValueError(f"Document folder escapes repository: {folder}")
     document_file = folder / "document.yaml"
     if document_file.is_file():
         metadata = _yaml_mapping(document_file, "document metadata")
@@ -104,12 +106,21 @@ def load_document(root: Path, document: str) -> dict[str, Any]:
             "assets": asset_paths, "template": metadata.get("template", metadata.get("profile")),
             "typography": metadata.get("typography"), "venue": metadata.get("venue"),
             "basename": metadata.get("basename", metadata.get("output", document)), "legacy": False,
+            "metadata_file": document_file.resolve(), "resource_base": folder.resolve(),
         }
 
     manifest_path = root / "config/documents" / f"{document}.yaml"
     if not manifest_path.is_file():
         raise ValueError(f"Document not found: {document}")
     manifest = _yaml_mapping(manifest_path, "legacy document manifest")
+    allowed_legacy = {
+        "id", "basename", "output", "profile", "template", "venue", "typography",
+        "metadata", "bibliography", "sources", "title", "author", "authors", "date",
+        "abstract", "keywords",
+    }
+    unknown = set(manifest) - allowed_legacy
+    if unknown:
+        raise ValueError("Unknown legacy document field(s): " + ", ".join(sorted(unknown)))
     sources = manifest.get("sources")
     if not isinstance(sources, list) or not sources:
         raise ValueError("Legacy manifest sources must be a non-empty ordered list")
@@ -120,11 +131,20 @@ def load_document(root: Path, document: str) -> dict[str, Any]:
     if not isinstance(bibliography, list):
         raise ValueError("Legacy bibliography must be a path or ordered list")
     bib_paths = [_safe_file(root, item, "bibliography") for item in bibliography]
+    metadata_file = manifest.get("metadata") if isinstance(manifest.get("metadata"), str) else None
+    metadata_values = _yaml_mapping(_safe_file(root, metadata_file, "metadata"), "document metadata") if metadata_file else {}
+    metadata_values = {**metadata_values, **(manifest.get("metadata") if isinstance(manifest.get("metadata"), dict) else {})}
+    authors = manifest.get("authors", manifest.get("author", metadata_values.get("authors", metadata_values.get("author", []))))
+    if isinstance(authors, str):
+        authors = [{"name": authors}]
     return {
         "id": document, "folder": root.resolve(), "metadata": manifest,
-        "authors": manifest.get("authors", manifest.get("author", [])), "sections": paths,
+        "authors": authors, "sections": paths,
         "bibliography": bib_paths, "assets": [],
         "template": manifest.get("template", manifest.get("profile")),
         "typography": manifest.get("typography"), "venue": manifest.get("venue"),
         "basename": manifest.get("basename", manifest.get("output", document)), "legacy": True,
+        "metadata_values": metadata_values,
+        "metadata_file": (root / metadata_file).resolve() if metadata_file else None,
+        "resource_base": root.resolve(),
     }

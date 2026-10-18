@@ -8,21 +8,21 @@ from pathlib import Path
 from .build import build
 
 
-def watched_files(root: Path, manifest: Path) -> list[Path]:
+def watched_files(root: Path, manifest: Path | None = None) -> list[Path]:
     """Return tracked project inputs; build/cache paths are deliberately excluded."""
     inputs = [root / "sources", root / "references", root / "assets", root / "templates", root / "config"]
-    paths = {manifest}
+    paths = {manifest} if manifest is not None and manifest.is_file() else set()
     for directory in inputs:
         if directory.exists():
             paths.update(path for path in directory.rglob("*") if path.is_file())
     return sorted(paths)
 
 
-def _snapshot(root: Path, manifest: Path) -> dict[Path, int]:
+def _snapshot(root: Path, manifest: Path | None = None) -> dict[Path, int]:
     return {path: path.stat().st_mtime_ns for path in watched_files(root, manifest)}
 
 
-def wait_for_quiet(root: Path, manifest: Path, state: dict[Path, int], quiet_period: float = 0.6) -> dict[Path, int]:
+def wait_for_quiet(root: Path, manifest: Path | None, state: dict[Path, int], quiet_period: float = 0.6) -> dict[Path, int]:
     """Wait until changes stop for a full debounce interval, updating the snapshot."""
     quiet_until = time.monotonic() + quiet_period
     while True:
@@ -35,7 +35,7 @@ def wait_for_quiet(root: Path, manifest: Path, state: dict[Path, int], quiet_per
             return state
 
 
-def watch(root: Path, document: str, profile: str, typography: str, format_name: str, venue: str | None = None) -> int:
+def watch(root: Path, document: str, profile: str | None, typography: str | None, format_name: str, venue: str | None = None) -> int:
     manifest = root / "config/documents" / f"{document}.yaml"
     state = _snapshot(root, manifest)
     print("Watching sources (Ctrl+C to stop)")

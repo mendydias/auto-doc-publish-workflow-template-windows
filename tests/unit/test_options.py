@@ -20,6 +20,12 @@ def test_conflicting_profile_alias_is_rejected() -> None:
         resolve_options(args, {})
 
 
+def test_cli_profile_overrides_environment_template() -> None:
+    args = SimpleNamespace(document=None, template=None, profile="report", format=None,
+                           action=None, typography=None, venue=None, non_interactive=None)
+    assert resolve_options(args, {"PUBLISH_TEMPLATE": "article"}).template == "report"
+
+
 @pytest.mark.parametrize("env,key", [({"PUBLISH_FORMAT": "unknown"}, "format"),
                                       ({"PUBLISH_ACTION": "prompt"}, "action"),
                                       ({"PUBLISH_DOCUMENT": "../bad"}, "document")])

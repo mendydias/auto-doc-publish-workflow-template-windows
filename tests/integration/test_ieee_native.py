@@ -24,6 +24,7 @@ def test_ieee_latex_pdf_and_submission_bundle() -> None:
     assert r"\documentclass[conference]{IEEEtran}" in tex
     assert "geometry" not in tex and "fontspec" not in tex and "unicode-math" not in tex
     assert r"\bibliographystyle{templates/ieee/upstream/IEEEtran}" in tex
+    assert r"\bibliography{sources/ieee-example/references}" in tex
     assert pdf.is_file()
 
     assert package(ROOT, "ieee-example", None, None) == 0
@@ -31,6 +32,6 @@ def test_ieee_latex_pdf_and_submission_bundle() -> None:
     with zipfile.ZipFile(archive) as bundle:
         names = set(bundle.namelist())
     assert "IEEEtran.cls" in names
-    assert "src/ieee-example/references.bib" in names
+    assert "sources/ieee-example/references.bib" in names
     assert "assets/workflow.pdf" in names
     assert not any(name.endswith((".log", ".aux", ".fls", ".synctex.gz")) for name in names)
