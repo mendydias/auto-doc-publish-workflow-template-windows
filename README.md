@@ -59,7 +59,8 @@ keywords, and author affiliations.
 
 All authoring inputs belong under `sources/<id>/`; no parallel manifest or
 repository-level bibliography is needed. Build runs once; Watch rebuilds when
-that document or shared renderer configuration changes. See
+that document or shared renderer configuration changes. Build logs report the
+selected metadata, bibliography, and output path. See
 [`docs/configuration.md`](docs/configuration.md) for details.
 
 ## Publishing
@@ -94,6 +95,11 @@ format support are documented in the
 [configuration reference](docs/configuration.md). The Python entrypoint also
 supports dependency checks, linting, watch, validation, packaging, tests,
 handoff, and cleanup; see `python -m tools.publishing --help`.
+
+If an IEEE bibliography edit seems missing, check the reported bibliography
+path first, then inspect `ieee-example.blg` for BibTeX's database path and
+`ieee-example.bbl` for the edited field. A changed `.bbl` but unchanged PDF
+points to the LaTeX/viewer stage; a failed build leaves the prior PDF in place.
 
 ## Verification and limitations
 

@@ -3,6 +3,7 @@
 Build or manage academic Markdown publications.
 .DESCRIPTION
 PowerShell front end for the shared Python publisher. Paths resolve from this script, not the caller's directory.
+Author documents live only under sources/<document-id>/. Build publishes once; Watch rebuilds on document and shared renderer changes.
 .PARAMETER Action
 Check, Build (default), Lint, Validate, Package, Test, Watch, Clean, or Handoff.
 .PARAMETER Document
