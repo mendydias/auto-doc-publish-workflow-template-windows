@@ -21,3 +21,15 @@ Not verified: Windows acceptance, Podman, Docker, official IEEE submission
 validation, anonymous-submission review, or cross-platform TeX toolchain
 equivalence. The independent bundle rebuild used the available local Linux
 TeX installation.
+
+## Unified workflow acceptance status
+
+The updated authoring contract and sample `sources/<id>/document.yaml` files
+are present, and unit tests cover discovery, numeric section ordering, Unicode
+filenames, duplicate section numbers, traversal, symlink escapes, and CLI
+option precedence. The new-layout loader is not yet consumed by the main
+renderers; legacy manifests remain required for real builds. The Windows
+bootstrap and workflow have only been edited and statically inspected here:
+WinGet package installation, agreements, TeX/font provisioning, setup
+repeatability, actual Windows PowerShell behavior, and GitHub Actions execution
+remain unverified. Do not treat this record as completion of Windows acceptance.

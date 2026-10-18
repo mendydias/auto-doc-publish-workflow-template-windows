@@ -4,6 +4,16 @@ This repository includes a complete illustrative IEEE conference manuscript.
 It demonstrates the workflow and IEEEtran class, but is **not an IEEE-approved
 template**, and its example venue limits are not official requirements.
 
+## Authoring layout
+
+The portable author-facing copy is in `sources/ieee-example/`: metadata is in
+`document.yaml`, ordered sections are under `sections/`, and the bibliography
+is beside the document metadata. New IEEE documents should copy this folder
+and update its structured `authors`, `abstract`, `keywords`, template, venue,
+and bibliography values. The older `src/ieee-example/` tree and manifest are
+retained temporarily because the current IEEE renderer still reads that
+legacy manifest layout.
+
 ## Build and inspect
 
 Use the repository virtual environment after installing project dependencies
@@ -28,9 +38,9 @@ embedded fonts when `pdffonts` is available, and unresolved references. These
 are local diagnostics, not venue certification. Review the complete PDF
 visually and use the conference's official submission checker.
 
-## Configuration ownership
+## Legacy renderer configuration
 
-- `config/documents/ieee-example.yaml` chooses source order, metadata,
+- `config/documents/ieee-example.yaml` currently chooses source order, metadata,
   bibliography, basename, profile, and venue.
 - `src/ieee-example/metadata.yaml` contains title, structured authors and
   affiliations, abstract, keywords, and optional funding.
@@ -42,9 +52,10 @@ visually and use the conference's official submission checker.
 - `config/defaults/common.yaml` contains only shared Pandoc input/standalone
   behavior. It must not grow venue-specific layout options.
 
-Create another paper by copying the manifest and metadata, adding ordered
-Markdown sources and a project bibliography, and updating the new manifest's
-paths/basename. CLI `--profile` and `--typography` selections override
+Until the renderer migration is complete, create runnable legacy examples by
+copying the manifest and metadata, adding ordered Markdown sources and a
+project bibliography, and updating the manifest's paths/basename. CLI
+`--template` (`--profile` alias) and `--typography` selections override
 manifest/profile defaults only when the profile allows the requested preset.
 All paths are repository-relative and validated against traversal.
 

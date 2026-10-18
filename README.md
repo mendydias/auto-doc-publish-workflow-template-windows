@@ -1,92 +1,109 @@
 # Academic Markdown Publisher
 
-A PowerShell 7+ interface and Python orchestration layer for ordered academic Markdown publications. The existing Windows-first launcher is preserved; the Python CLI can also be used directly on other platforms. YAML manifests select content, publication profiles control formatting and tools, and venue configurations describe submission checks.
-
-## Requirements
-
-- Windows 10/11 and PowerShell 7.4 or later.
-- Python 3.11+ (3.12 is selected for CI) and project-local dependencies.
-- Pandoc 3.1–3.x and a `pandoc-crossref` executable built for the selected Pandoc release.
-- For PDF only: LuaLaTeX, latexmk, Perl, kpsewhich, TeX classes/packages, Libertinus Serif, and Libertinus Math.
-- The PDF toolchain check compiles a small font probe with LuaLaTeX; `fc-list`/fontconfig are not used.
-- Native publishing tool installations are managed by the workstation or runner owner. The project never installs or changes system publishing tools automatically.
-
-Supported and selected toolchain requirements are in `config/toolchain.toml`. A `pandoc-crossref` build-version mismatch is treated as an error. HTML and DOCX do not require the PDF/TeX toolchain; `all` does.
-
-## Project-local Python environment
-
-From any directory, create a project-local `.venv` and install the pinned project dependencies:
+Prepare a Windows workstation once, then edit documents under `sources/` and
+publish them with the guided command:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\setup.ps1
+.\setup.ps1
+.\publish.ps1
 ```
 
-This script only creates `.venv` and installs the project's pinned Python packages. It does not install PowerShell, TeX, Pandoc, Perl, fonts, or alter execution policy. Troubleshooting execution policy should follow organizational policy; if script execution is blocked, use an approved process-scoped policy or invoke from a permitted PowerShell session rather than changing machine policy.
+The setup uses WinGet and may request agreement acceptance. Review the
+packages and their agreements before running it. To run unattended, use
+`-NonInteractive -AcceptAgreements`. It does not change execution policy or
+silently elevate. Setup logs are written to `build/setup/`.
 
-## Quick start
+## Author documents
+
+Each publication lives in its own folder. Copy a folder to start another
+document, then update its metadata and content:
+
+```text
+sources/
+  my-paper/
+    document.yaml
+    sections/
+      01-introduction.md
+      02-methods.md
+    references.bib
+    assets/
+      figure.svg
+```
+
+The folder name is the document ID and default output basename. `document.yaml`
+contains the title, structured authors, and optional template, typography,
+venue, abstract, keywords, and bibliography settings. Numbered Markdown files
+directly under `sections/` are ordered numerically. An explicit ordered
+`sections` list can be used when needed. Bibliographies and assets belong in
+the document folder; their paths are relative to that folder.
+
+Example metadata:
+
+```yaml
+title: A Reproducible Study
+authors:
+  - name: Morgan Researcher
+    affiliation: Example University
+    email: morgan@example.edu
+date: "2026"
+template: article
+bibliography: references.bib
+```
+
+Use standard Pandoc Markdown, citations backed by the document's BibTeX file,
+and image paths relative to the document folder. See
+[the complete authoring contract](docs/authoring-contract.md),
+[IEEE walkthrough](docs/ieee-authoring.md), and the shipped documents in
+`sources/` for examples. IEEE documents additionally require an abstract,
+keywords, and author affiliations.
+
+## Publishing
+
+With multiple documents, `publish.ps1` displays a numbered document menu and a
+template menu. A single document is selected automatically. The default format
+is PDF; template restrictions and defaults are applied during validation.
+Artifacts and diagnostics are kept under `build/<document>/`. Generated files
+are not source files and can be recreated at any time.
+
+For automation, provide choices through environment variables; scripts do
+not prompt in CI or when stdin is redirected:
 
 ```powershell
-pwsh -NoProfile -File .\publish.ps1 -Action Check
-pwsh -NoProfile -File .\publish.ps1
-pwsh -NoProfile -File .\publish.ps1 -Action Build -Document example -Profile article -Typography academic -Format pdf
-pwsh -NoProfile -File .\publish.ps1 -Action Build -Profile thesis -Format all
-pwsh -NoProfile -File .\publish.ps1 -Action Lint
-pwsh -NoProfile -File .\publish.ps1 -Action Test
-pwsh -NoProfile -File .\publish.ps1 -Action Watch
-pwsh -NoProfile -File .\publish.ps1 -Action Clean
+$env:PUBLISH_DOCUMENT = 'ieee-example'
+$env:PUBLISH_TEMPLATE = 'ieee-conference'
+$env:PUBLISH_FORMAT = 'pdf'
+$env:PUBLISH_NON_INTERACTIVE = '1'
+.\publish.ps1
 ```
 
-The public defaults are Build, PDF, and document `example`. Profile and typography default from the manifest/profile, respectively (the generic project fallback remains `article` and `default`). Formats are `pdf`, `latex`, `docx`, `html`, `epub`, and `all`; availability is profile-specific. `publish.ps1 -?` shows PowerShell help; Python also provides `python -m tools.publishing --help`.
+Supported variables are `PUBLISH_DOCUMENT`, `PUBLISH_TEMPLATE`,
+`PUBLISH_FORMAT`, `PUBLISH_ACTION`, `PUBLISH_NON_INTERACTIVE`,
+`PUBLISH_TYPOGRAPHY`, and `PUBLISH_VENUE`. Explicit CLI options override
+environment values. `--profile` / `-Profile` remains a compatibility alias
+for the template option.
 
-The project root is resolved from the entry point, not the current directory. Manifest paths are repository-relative. Output paths are `build/<document>/<profile>/<typography>/<format>/`; generated TeX, caches, temporary files, and logs stay under ignored `build/`. Source files are never rewritten.
+## Advanced use and configuration
 
-## Documents and profiles
+Shared configuration belongs in `config/`, maintained templates in
+`templates/`, and generated output in `build/`. Template-specific metadata and
+format support are documented in [configuration reference](docs/configuration.md).
+The Python entrypoint also supports validation, linting, watch, packaging, and
+cleanup actions; see `python -m tools.publishing --help`.
 
-YAML manifests in `config/documents/` declare an ordered `sources` list, metadata, bibliography, and safe output basename. Ordering is preserved exactly. Profile configuration in `config/profiles/` controls document structure and engines; typography in `config/typography/` controls LaTeX appearance independently. Format settings are isolated in `config/formats/`. The `ieee-example` manifest selects its IEEE profile and illustrative venue without script edits.
+The repository still carries compatibility support for legacy manifests in
+`config/documents/`. New authoring should use the folder layout above. The
+normalized loader and renderer migration is not yet complete, so existing
+publishing commands continue to resolve legacy manifests until that integration
+is finished.
 
-Profiles: `article`, `report`, `thesis`, `ieee-conference`. Typography: `default`, `academic`, `compact`, `ieee`. The IEEE profile permits only class-controlled `ieee` typography. Add sources/resources with repository-relative paths and commit intentional assets. Keep generated artifacts under `build/`.
+## Verification and limitations
 
-See [the IEEE authoring walkthrough](docs/ieee-authoring.md) for its metadata schema, standalone LaTeX/PDF builds, validation, and submission source bundle.
-
-The thesis profile uses front matter, Roman numbering before `\mainmatter`, Arabic numbering thereafter, chapter-aware cross-reference numbering from pandoc-crossref, and appendices. The thesis uses the standard Pandoc LaTeX template with narrow header includes rather than a wholesale template replacement. Non-LaTeX renderers do not promise identical pagination or thesis front matter: raw TeX commands and page furniture are LaTeX-specific; HTML/EPUB reflow and DOCX uses Word styles.
-
-## Citations and Zotero
-
-The sample bibliography is `references/references.bib`; the APA 7 CSL is `references/apa.csl`. Its source, author attribution, and CC BY-SA 3.0 licensing are recorded in `references/APA-CSL-PROVENANCE.md` and retained in the style.
-
-For Zotero, use Better BibTeX and stable citation keys. Export a project bibliography to `references/references.bib` (or a dedicated manifest path), configure automatic export to keep it synchronized, review the diff, and commit bibliography updates with the document changes. Keep citekeys stable to avoid broken citations. Cite syntax demonstrates narrative (`@smith2021`), parenthetical, multiple (`[@smith2021; @jones2020]`), and page-specific (`@jones2020, p. 17`) forms. Cross-reference filters run before citeproc; citeproc is enabled once.
-
-## Validation, watch, and cleanup
-
-`Lint` validates YAML manifests, source/resource paths, duplicate BibTeX keys, citation keys, duplicate labels, unresolved cross-references, and Pandoc-parsed Markdown; it then runs pinned Ruff and PyMarkdown with Pandoc-oriented configuration. Negative fixtures and test cases exercise failures. Watch polls source/manifest/resource/template/config inputs, debounces edits, and runs builds synchronously (no overlapping builds); build outputs are not watched. Ctrl+C stops cleanly.
-
-`Clean` removes generated contents only under repository `build/`, retaining `.gitkeep`. It preflights symlinks and Windows junctions and refuses unsafe paths rather than traversing outside the intended directory.
-
-## Tests and GitHub Actions
-
-Run `-Action Test` and `-Action Lint` after setup. Tests inspect DOCX XML, EPUB package contents, and textual exports rather than only checking existence. The workflow uses `windows-2022`, PowerShell, pinned Python and action SHAs. PR jobs target article/thesis PDF and DOCX; main/tag builds include all formats; manual dispatch exposes document/profile/typography/format inputs. Release permissions are scoped to the release job and it depends on successful verification/build jobs.
-
-GitHub-hosted Windows runners are **not assumed** to contain the TeX/Pandoc/crossref/Perl/font toolchain. The workflow explicitly runs dependency checks and records versions, then fails clearly if runner-image prerequisites are missing. Provision these pinned/approved native tools in an organization-managed runner image or approved CI provisioning step; do not interpret a passing YAML/static check as a successful Actions run. Actual Actions success is unverified until the workflow runs.
-
-## Handoff and troubleshooting
-
-Generate a continuation report for a Windows agent:
-
-```powershell
-pwsh -NoProfile -File .\scripts\windows-handoff.ps1
-```
-
-It writes `build/handoff/windows-handoff.md` and `.json`; it does not run acceptance or install tools. The report includes host/tool discovery, repository state, next steps, and the acceptance checklist.
-
-Common issues:
-
-- **Python missing / Windows Store alias:** install Python independently or create the project `.venv`; disable an unwanted App Execution Alias in Windows Settings if it shadows a real interpreter.
-- **pandoc-crossref mismatch:** install a crossref build matching `pandoc --version`; do not silently bypass the filter.
-- **LuaLaTeX font unavailable:** install/enable the required Libertinus fonts in the TeX environment and rerun Check; the minimal compilation is authoritative.
-- **latexmk fails:** verify Perl is on `PATH`, TeX binaries are on `PATH`, and `latexmk -v` works in the same PowerShell session.
-- **DOCX styles differ:** edit the maintained `templates/docx/reference.docx`; Word layout is not expected to match PDF exactly.
-- **Execution policy:** do not weaken machine policy automatically; follow local IT guidance and use an approved session-scoped method.
-
-## Limitations and verification status
-
-The renderer formats differ by design: PDF/LaTeX controls pagination and typography; DOCX depends on Word's style/layout engine; HTML/EPUB reflow and have no page furniture. The project is implemented in a Linux development environment, but **Windows acceptance has not been performed**. PowerShell exit behavior, Windows aliases, file locks, junction handling, Windows paths, watch behavior, and native Windows tool versions must be verified with the handoff checklist. Configuration inspection is not evidence of a successful GitHub Actions run.
+Run `python -m pytest` for the test suite. The current Linux development run
+passed 54 tests with one Windows-only test skipped. Static workflow edits are
+not evidence of a
+successful GitHub Actions run. Windows setup, WinGet package availability,
+MiKTeX package/font provisioning, PDF smoke tests, and end-to-end publishing
+must still be verified on a real Windows machine. In particular, the bootstrap
+currently provisions the primary tools and Python environment but does not yet
+automate every TeX package, font, or pinned `pandoc-crossref` check described
+in the toolchain plan.

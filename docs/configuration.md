@@ -1,29 +1,52 @@
-# Publication configuration contract
+# Configuration reference
 
-All manifest and profile resource paths are relative to the repository root.
-Document IDs, profile IDs, typography IDs, and venue IDs use letters, digits,
-hyphens, and underscores; path traversal is rejected. CLI choices take
-precedence over the document manifest, which takes precedence over project
-fallbacks. A profile's allowed typography/formats are mandatory restrictions,
-not defaults that a CLI option can bypass.
+## Author documents
 
-| Configuration | Owned fields |
+New documents live in `sources/<document-id>/`. The directory name supplies
+the ID and default basename. `document.yaml` contains metadata and optional
+`template`, `typography`, `venue`, `sections`, `bibliography`, and `assets`
+values. Numbered Markdown under `sections/` is ordered numerically; an
+explicit ordered `sections` list overrides discovery. Resource paths are
+relative to the document folder and must not escape it. See
+[the authoring contract](authoring-contract.md) for the shared schema and
+template-specific metadata requirements.
+
+The checked-in `sources/` examples are in the new layout. The Python document
+loader can discover and validate them. **The main build, validation, and
+submission commands still consume legacy `config/documents/<id>.yaml`
+manifests**; migration of those renderers is pending. Avoid deleting legacy
+manifests until the renderer migration lands.
+
+## Shared publishing configuration
+
+| Location | Owns |
 |---|---|
-| `config/documents/<id>.yaml` | `id`, `basename` (legacy `output`), `profile`, `venue`, metadata path or inline mapping, ordered bibliography paths, ordered Markdown `sources` |
-| `config/profiles/<id>.yaml` | document class/options, structure, top-level division, numbering, template, LaTeX engine, bibliography processor/style, typography default/allowlist, supported formats, restrictions |
-| `config/venues/<id>.yaml` | illustrative flag, page size/count, anonymity, and named submission checks |
-| `config/typography/<id>.yaml` | typography preset; `mode: class-controlled` delegates all visual rules to the class |
-| `config/defaults/common.yaml` | shared Pandoc input reader and standalone behavior only |
+| `config/profiles/<id>.yaml` | Legacy renderer's document class/options, structure, numbering, template, LaTeX engine, bibliography processor/style, typography defaults/allowlist, supported formats, restrictions |
+| `config/venues/<id>.yaml` | Illustrative flag, page size/count, anonymity, named submission checks |
+| `config/typography/<id>.yaml` | Typography preset; class-controlled mode delegates layout to the class |
+| `config/formats/<format>.yaml` | Renderer options isolated by output format |
+| `config/defaults/common.yaml` | Shared Pandoc reader and standalone settings |
+| `templates/` | Maintained renderer templates and their assets |
+| `build/` | Generated output, logs, caches, setup diagnostics, and resolved settings |
 
-Source/bibliography/metadata/resource paths must resolve inside the repository.
-The output basename is a single safe identifier. Supported LaTeX engines are
-`pdflatex`, `lualatex`, and `xelatex`; bibliography processors are `citeproc`,
-`bibtex`, and `biber`. These values select built-in adapters—configuration
-never supplies executable command strings. Container execution choices
-(`native`, `podman`, `docker`) are separate from the profile's LaTeX engine;
-the current IEEE implementation uses the existing native Windows-first
-launcher, with container alternatives not yet integrated/verified.
+Legacy manifest and profile resource paths are repository-relative. Document
+IDs, template IDs, typography IDs, and venue IDs use letters, digits, hyphens,
+and underscores. The renderer validates repository boundaries and safe output
+basenames. Supported LaTeX engines are `pdflatex`, `lualatex`, and `xelatex`;
+bibliography processors are `citeproc`, `bibtex`, and `biber`. Configuration
+never supplies executable command strings.
 
-`build/<document>/<profile>/<typography>/<format>/resolved-config.yaml`
-records the effective settings for a build. Generated output/logs/caches remain
-under ignored `build/` and should not be committed.
+## Options and precedence
+
+The shared CLI/environment option names are `PUBLISH_DOCUMENT`,
+`PUBLISH_TEMPLATE`, `PUBLISH_FORMAT`, `PUBLISH_ACTION`,
+`PUBLISH_NON_INTERACTIVE`, `PUBLISH_TYPOGRAPHY`, and `PUBLISH_VENUE`.
+Precedence is explicit CLI options, environment, document defaults, then
+application defaults. `--profile` is a compatibility alias for `--template`;
+conflicting values are rejected. The PowerShell wrapper forwards only options
+explicitly supplied on its command line.
+
+The build writes effective settings to
+`build/<document>/<template>/<typography>/<format>/resolved-config.yaml`.
+Generated files and caches should not be committed. Cleanup is constrained to
+the repository's `build/` directory and refuses unsafe paths.
