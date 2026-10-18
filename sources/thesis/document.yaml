@@ -1,0 +1,10 @@
+title: "A Thesis on Reproducible Publishing"
+authors:
+  - name: Morgan Researcher
+    affiliation: Example University
+date: "2026"
+template: thesis
+typography: academic
+bibliography: references.bib
+metadata:
+  lang: en-US
