@@ -1,0 +1,13 @@
+id: ieee-example
+basename: ieee-example
+profile: ieee-conference
+venue: example-conference
+metadata: src/ieee-example/metadata.yaml
+bibliography:
+  - src/ieee-example/references.bib
+sources:
+  - src/ieee-example/01-introduction.md
+  - src/ieee-example/02-related-work.md
+  - src/ieee-example/03-methods.md
+  - src/ieee-example/04-results.md
+  - src/ieee-example/05-conclusion.md

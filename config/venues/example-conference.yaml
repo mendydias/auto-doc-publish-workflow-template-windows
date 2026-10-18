@@ -1,0 +1,11 @@
+# Illustrative venue only; these values are not official IEEE requirements.
+id: example-conference
+illustrative: true
+paper-size: letter
+page-limit: 6
+anonymous: false
+submission-checks:
+  - page-size
+  - page-limit
+  - embedded-fonts
+  - unresolved-references
