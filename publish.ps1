@@ -21,14 +21,15 @@ pwsh -NoProfile -File .\publish.ps1 -Action Build -Document example -Profile art
 [CmdletBinding()]
 param(
     [ValidateSet('Check','Build','Lint','Validate','Package','Test','Watch','Clean','Handoff')]
-    [string] $Action = 'Build',
+    [string] $Action,
     [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9_-]*$')]
-    [string] $Document = 'example',
+    [string] $Document,
     [string] $Profile,
     [string] $Typography,
     [string] $Venue,
     [ValidateSet('pdf','latex','docx','html','epub','all')]
-    [string] $Format = 'pdf'
+    [string] $Format,
+    [switch] $NonInteractive
 )
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
@@ -48,10 +49,14 @@ else {
     else { $pythonArgs = @('-m','tools.publishing') }
 }
 if (-not $pythonArgs) { $pythonArgs = @('-m','tools.publishing') }
-$arguments = @($pythonArgs) + @('--action',$Action,'--document',$Document,'--format',$Format)
-if ($Profile) { $arguments += @('--profile',$Profile) }
-if ($Typography) { $arguments += @('--typography',$Typography) }
-if ($Venue) { $arguments += @('--venue',$Venue) }
+$arguments = @($pythonArgs)
+if ($PSBoundParameters.ContainsKey('Action')) { $arguments += @('--action',$Action) }
+if ($PSBoundParameters.ContainsKey('Document')) { $arguments += @('--document',$Document) }
+if ($PSBoundParameters.ContainsKey('Format')) { $arguments += @('--format',$Format) }
+if ($PSBoundParameters.ContainsKey('Profile')) { $arguments += @('--profile',$Profile) }
+if ($PSBoundParameters.ContainsKey('Typography')) { $arguments += @('--typography',$Typography) }
+if ($PSBoundParameters.ContainsKey('Venue')) { $arguments += @('--venue',$Venue) }
+if ($NonInteractive) { $arguments += '--non-interactive' }
 Push-Location -LiteralPath $root
 try {
     & $python @arguments

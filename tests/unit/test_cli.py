@@ -1,9 +1,11 @@
 from tools.publishing.__main__ import parser
+from tools.publishing.options import resolve_options
 
 
 def test_public_defaults_and_choices() -> None:
     args = parser().parse_args([])
-    assert (args.action, args.format, args.profile, args.typography) == ("Build", "pdf", None, None)
+    options = resolve_options(args, {})
+    assert (options.action, options.format, options.template, options.typography) == ("Build", "pdf", None, None)
 
 
 def test_all_format_and_thesis_arguments() -> None:
