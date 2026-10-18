@@ -1,0 +1,6 @@
+mainfont: Libertinus Serif
+mathfont: Libertinus Math
+fontsize: 12pt
+geometry: margin=1in
+linestretch: 1.5
+numbersections: true

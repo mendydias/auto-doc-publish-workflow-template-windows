@@ -1,0 +1,7 @@
+:root { color-scheme: light; font-family: Georgia, "Times New Roman", serif; line-height: 1.65; }
+body { max-width: 52rem; margin: 2rem auto; padding: 0 1.2rem; color: #20252b; }
+img, svg { max-width: 100%; height: auto; }
+figure, table { margin: 1.5rem auto; }
+figcaption, caption { font-size: .92rem; }
+pre { overflow-x: auto; padding: 1rem; background: #f2f4f7; }
+:focus-visible { outline: 3px solid #165dba; outline-offset: 2px; }

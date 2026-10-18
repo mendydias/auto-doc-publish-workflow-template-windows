@@ -1,0 +1,5 @@
+mainfont: Libertinus Serif
+mathfont: Libertinus Math
+fontsize: 10pt
+geometry: margin=0.75in
+linestretch: 1.0
