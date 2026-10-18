@@ -65,6 +65,18 @@ def test_non_pdf_build_does_not_invoke_latex(monkeypatch) -> None:
     assert all("latexmk" not in " ".join(args).lower() and "lualatex" not in " ".join(args).lower() for args in invocations)
 
 
+def test_repeated_build_is_successful_and_semantically_stable() -> None:
+    from tools.publishing.build import build
+
+    assert build(ROOT, "example", "article", "default", "html") == 0
+    artifact = ROOT / "build/example/article/default/html/example.html"
+    first = artifact.read_text(encoding="utf-8")
+    assert build(ROOT, "example", "article", "default", "html") == 0
+    second = artifact.read_text(encoding="utf-8")
+    assert "ref-smith2021" in first and "ref-smith2021" in second
+    assert "fig:workflow" in first and "fig:workflow" in second
+
+
 def test_unicode_checkout_and_invocation_from_another_directory(tmp_path: Path) -> None:
     if not shutil.which("pandoc") or not shutil.which("pandoc-crossref"):
         pytest.skip("Pandoc toolchain is unavailable")
