@@ -132,10 +132,11 @@ def validate(root: Path, manifest_path: Path | dict, source_overrides: list[str]
             continue
         candidates = _resource_candidates(root, manifest, source_paths, target)
         resource = next((candidate for candidate in candidates if candidate.is_file()), None)
-        allowed = [root.resolve()]
+        allowed = []
         resource_base = manifest.get("resource_base")
         if isinstance(resource_base, str):
             allowed.append((root / resource_base).resolve())
+        allowed.extend(source.resolve().parent for source in source_paths)
         if resource is None or not any(resource.is_relative_to(base) for base in allowed):
             errors.append(f"Missing or unsafe resource: {target}")
     if bibliography:

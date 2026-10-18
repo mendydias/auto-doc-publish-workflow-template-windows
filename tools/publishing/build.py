@@ -85,7 +85,7 @@ def build(root: Path, document: str, profile: str | None, typography: str | None
                     args.append(f"--{option}")
             else:
                 args += [f"--{option}", str(value)]
-        resource_paths = [root.resolve(), (root / manifest["resource_base"]).resolve(), *(source.resolve().parent for source in sources)]
+        resource_paths = [(root / manifest["resource_base"]).resolve(), *(source.resolve().parent for source in sources)]
         args += ["--to", "latex" if output_format in ("latex", "pdf") else output_format, "--output", str(output), "--resource-path", os.pathsep.join(dict.fromkeys(map(str, resource_paths)))]
         format_defaults = yaml.safe_load((root / "config/formats" / f"{output_format}.yaml").read_text(encoding="utf-8")) or {}
         latex_settings = {**profile_config, **typography_config} if output_format in ("pdf", "latex") else {}
@@ -201,7 +201,7 @@ def _build_ieee(root: Path, resolved: dict, format_name: str, shared_defaults: d
         if key in {"from", "standalone"}:
             args += [f"--{key}", str(value)] if key == "from" else ["--standalone"]
     sources = [root / source for source in manifest["sources"]]
-    resource_paths = [root.resolve(), (root / manifest["resource_base"]).resolve(), *(source.resolve().parent for source in sources)]
+    resource_paths = [(root / manifest["resource_base"]).resolve(), *(source.resolve().parent for source in sources)]
     args += ["--to", "latex", "--template", str(root / profile["template"]), "--output", str(tex_output), "--resource-path", os.pathsep.join(dict.fromkeys(map(str, resource_paths)))]
     metadata = dict(manifest.get("metadata", {}))
     for key in ("title", "author", "authors", "date", "abstract", "keywords"):

@@ -31,3 +31,22 @@ def test_duplicate_labels_missing_citation_and_unresolved_reference_fail() -> No
     assert any("Duplicate label: repeated" in error for error in errors)
     assert any("Missing citation key: not-in-bibliography" in error for error in errors)
     assert any("Unresolved cross-reference: fig:not-present" in error for error in errors)
+
+
+def test_document_cannot_reference_repository_level_author_assets(tmp_path: Path) -> None:
+    from tools.publishing.validate import validate
+
+    section = tmp_path / "sources/paper/sections/01-start.md"
+    section.parent.mkdir(parents=True)
+    section.write_text("A [repository-level file](outside.txt).", encoding="utf-8")
+    (tmp_path / "sources/paper/document.yaml").write_text(
+        "title: Paper\nauthors: [Author]\n", encoding="utf-8"
+    )
+    (tmp_path / "outside.txt").write_text("not document-local", encoding="utf-8")
+    manifest = {
+        "title": "Paper", "authors": ["Author"], "output": "paper",
+        "sources": ["sources/paper/sections/01-start.md"],
+        "bibliography": [], "assets": [], "resource_base": "sources/paper",
+    }
+    errors = validate(tmp_path, manifest)
+    assert any("Missing or unsafe resource: outside.txt" in error for error in errors)

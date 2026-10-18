@@ -98,9 +98,9 @@ def package(root: Path, document: str, profile: str | None, typography: str | No
     files += [root / item for item in bibliography]
     files += [root / item for item in manifest.get("assets", [])]
     document_folder = root / manifest["document_folder"]
-    for asset_dir in (document_folder / "assets", root / "assets"):
-        if asset_dir.is_dir():
-            files.extend(path for path in asset_dir.rglob("*") if path.is_file())
+    asset_dir = document_folder / "assets"
+    if asset_dir.is_dir():
+        files.extend(path for path in asset_dir.rglob("*") if path.is_file())
     for source in manifest["sources"]:
         source_path = root / source
         text = source_path.read_text(encoding="utf-8")
@@ -108,7 +108,7 @@ def package(root: Path, document: str, profile: str | None, typography: str | No
             target = target.split()[0].strip("<>")
             if re.match(r"^(?:https?:|data:|#)", target, re.I):
                 continue
-            candidates = [source_path.parent / target, document_folder / target, root / target]
+            candidates = [source_path.parent / target, document_folder / target]
             asset = next((candidate.resolve() for candidate in candidates if candidate.resolve().is_file()), None)
             if asset is not None:
                 files.append(asset)
