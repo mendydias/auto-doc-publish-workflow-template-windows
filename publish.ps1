@@ -4,13 +4,15 @@ Build or manage academic Markdown publications.
 .DESCRIPTION
 PowerShell front end for the shared Python publisher. Paths resolve from this script, not the caller's directory.
 .PARAMETER Action
-Check, Build (default), Lint, Test, Watch, Clean, or Handoff.
+Check, Build (default), Lint, Validate, Package, Test, Watch, Clean, or Handoff.
 .PARAMETER Document
 Document manifest name, default example.
 .PARAMETER Profile
-Structural profile: article, report, or thesis.
+Publication profile; defaults to the selected document manifest.
 .PARAMETER Typography
 Typography preset: default, academic, or compact.
+.PARAMETER Venue
+Venue requirements identifier; defaults to the document manifest.
 .PARAMETER Format
 pdf (default), latex, docx, html, epub, or all.
 .EXAMPLE
@@ -18,14 +20,13 @@ pwsh -NoProfile -File .\publish.ps1 -Action Build -Document example -Profile art
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('Check','Build','Lint','Test','Watch','Clean','Handoff')]
+    [ValidateSet('Check','Build','Lint','Validate','Package','Test','Watch','Clean','Handoff')]
     [string] $Action = 'Build',
     [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9_-]*$')]
     [string] $Document = 'example',
-    [ValidateSet('article','report','thesis')]
-    [string] $Profile = 'article',
-    [ValidateSet('default','academic','compact')]
-    [string] $Typography = 'default',
+    [string] $Profile,
+    [string] $Typography,
+    [string] $Venue,
     [ValidateSet('pdf','latex','docx','html','epub','all')]
     [string] $Format = 'pdf'
 )
@@ -47,7 +48,10 @@ else {
     else { $pythonArgs = @('-m','tools.publishing') }
 }
 if (-not $pythonArgs) { $pythonArgs = @('-m','tools.publishing') }
-$arguments = @($pythonArgs) + @('--action',$Action,'--document',$Document,'--profile',$Profile,'--typography',$Typography,'--format',$Format)
+$arguments = @($pythonArgs) + @('--action',$Action,'--document',$Document,'--format',$Format)
+if ($Profile) { $arguments += @('--profile',$Profile) }
+if ($Typography) { $arguments += @('--typography',$Typography) }
+if ($Venue) { $arguments += @('--venue',$Venue) }
 Push-Location -LiteralPath $root
 try {
     & $python @arguments

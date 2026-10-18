@@ -7,8 +7,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+import yaml
+
 from .dependencies import check_dependencies
 from .validate import validate
+from .resolve_document import resolve_document
 
 FORMATS = ("pdf", "latex", "docx", "html", "epub")
 
@@ -22,19 +25,29 @@ def _command(args: list[str], cwd: Path) -> int:
         return 127
 
 
-def build(root: Path, document: str, profile: str, typography: str, format_name: str) -> int:
+def build(root: Path, document: str, profile: str | None, typography: str | None, format_name: str, venue: str | None = None) -> int:
     try:
         import yaml
     except ImportError as error:
         raise RuntimeError("PyYAML is missing; create the project environment with .\\scripts\\setup.ps1") from error
+    resolved = resolve_document(root, document, profile, typography, venue)
+    manifest = resolved["manifest"]
+    profile = resolved["profile"]
+    typography = resolved["typography"]
     manifest_path = root / "config/documents" / f"{document}.yaml"
-    if not manifest_path.is_file():
-        raise ValueError(f"Document manifest not found: {manifest_path.relative_to(root)}")
-    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
-    shared_defaults = yaml.safe_load((root / "config/pandoc.yaml").read_text(encoding="utf-8")) or {}
-    profile_config = yaml.safe_load((root / "config/profiles" / f"{profile}.yaml").read_text(encoding="utf-8"))
-    typography_config = yaml.safe_load((root / "config/typography" / f"{typography}.yaml").read_text(encoding="utf-8"))
-    validate(root, manifest_path)
+    defaults_path = root / "config/defaults/common.yaml"
+    if not defaults_path.is_file():
+        defaults_path = root / "config/pandoc.yaml"
+    shared_defaults = yaml.safe_load(defaults_path.read_text(encoding="utf-8")) or {}
+    profile_config = resolved["profile_config"]
+    typography_config = resolved["typography_config"]
+    validation_errors = validate(root, manifest_path)
+    if validation_errors:
+        raise ValueError("\n".join(validation_errors))
+    if format_name != "all" and profile_config.get("formats") and format_name not in profile_config["formats"]:
+        raise ValueError(f"Format '{format_name}' is not supported by profile '{profile}'")
+    if profile == "ieee-conference":
+        return _build_ieee(root, resolved, format_name, shared_defaults)
     formats = FORMATS if format_name == "all" else (format_name,)
     if check_dependencies(root, format_name):
         return 1
@@ -127,3 +140,75 @@ def build(root: Path, document: str, profile: str, typography: str, format_name:
                 return code
         print(f"Built {output.relative_to(root)}")
     return 0
+
+
+def _build_ieee(root: Path, resolved: dict, format_name: str, shared_defaults: dict) -> int:
+    """Build the class-controlled IEEE profile with the profile's safe tool choices."""
+    if format_name not in ("pdf", "latex"):
+        raise ValueError("IEEE conference profile supports only latex and pdf")
+    manifest = resolved["manifest"]
+    profile = resolved["profile_config"]
+    document = resolved["document"]
+    typography = resolved["typography"]
+    engine = profile.get("latex-engine", "pdflatex")
+    required = ["pandoc", engine]
+    if format_name == "pdf":
+        required.extend(["latexmk", "bibtex"] if profile.get("bibliography", {}).get("processor") == "bibtex" else ["latexmk"])
+    missing = [name for name in required if not shutil.which(name)]
+    if missing:
+        raise RuntimeError("Missing required tools for this build: " + ", ".join(missing))
+    output_dir = root / "build" / document / resolved["profile"] / typography / format_name
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output = output_dir / f"{resolved['output']}.{'tex' if format_name == 'latex' else 'pdf'}"
+    tex_output = output if format_name == "latex" else output_dir / f"{resolved['output']}.tex"
+    config_record = {key: value for key, value in resolved.items() if key != "manifest"}
+    config_record["manifest"] = manifest
+    (output_dir / "resolved-config.yaml").write_text(yaml.safe_dump(config_record, sort_keys=False), encoding="utf-8")
+    args = [shutil.which("pandoc") or "pandoc", *[str(root / source) for source in manifest["sources"]]]
+    for key, value in shared_defaults.items():
+        if key in {"from", "standalone"}:
+            args += [f"--{key}", str(value)] if key == "from" else ["--standalone"]
+    args += ["--to", "latex", "--template", str(root / profile["template"]), "--output", str(tex_output), "--resource-path", str(root)]
+    if manifest.get("metadata"):
+        args += ["--metadata-file", str(root / manifest["metadata"])]
+    args += ["--variable", f"documentclass={profile.get('documentclass', 'IEEEtran')}"]
+    args += ["--variable", "float-placement=b"]
+    for option in profile.get("classoption", []):
+        args += ["--variable", f"classoption={option}"]
+    bibliography_style = profile.get("bibliography", {}).get("style")
+    if bibliography_style:
+        args += ["--variable", f"bibliography-style={Path(bibliography_style).with_suffix('').as_posix()}"]
+    if profile.get("number-sections"):
+        args.append("--number-sections")
+    if profile.get("top-level-division"):
+        args += ["--top-level-division", profile["top-level-division"]]
+    bibliography = manifest.get("bibliography", [])
+    if isinstance(bibliography, str):
+        bibliography = [bibliography]
+    processor = profile.get("bibliography", {}).get("processor", "citeproc")
+    for source in bibliography:
+        args += ["--bibliography", str(root / source)]
+    bibliography_paths = [Path(source).with_suffix("").as_posix() for source in bibliography]
+    if bibliography_paths:
+        args += ["--variable", f"bibliography={','.join(bibliography_paths)}"]
+    if processor == "bibtex":
+        args.append("--natbib")
+    elif bibliography:
+        args.append("--citeproc")
+    result = _command(args, root)
+    if result or format_name == "latex":
+        return result
+    command = [shutil.which("latexmk") or "latexmk", "-pdf", f"-pdflatex={engine} %O %S", "-interaction=nonstopmode", "-halt-on-error", "-file-line-error", f"-outdir={output_dir}", str(output_dir / f"{resolved['output']}.tex")]
+    result = _command(command, root)
+    log_path = output_dir / f"{resolved['output']}.log"
+    if not result and log_path.is_file():
+        import re
+
+        log_text = log_path.read_text(encoding="utf-8", errors="replace")
+        unresolved = re.findall(r"(?:Citation|Reference) `[^']+' .*?undefined", log_text)
+        if unresolved:
+            print("Unresolved LaTeX references:\n" + "\n".join(sorted(set(unresolved))), file=sys.stderr)
+            return 1
+    if not result:
+        print(f"Built {output.relative_to(root)}")
+    return result
