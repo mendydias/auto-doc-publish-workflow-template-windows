@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 from .build import build
@@ -14,6 +16,7 @@ from .watch import watch
 from .handoff import generate as generate_handoff
 from .submission import check_venue, package
 from .options import resolve_options
+from .documents import discover_documents, load_document
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -35,6 +38,29 @@ def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     try:
         options = resolve_options(args)
+        unattended = options.non_interactive or bool(os.environ.get("CI")) or not sys.stdin.isatty()
+        if options.action == "Build":
+            document_selected = args.document is not None or "PUBLISH_DOCUMENT" in os.environ
+            if not document_selected:
+                documents = discover_documents(ROOT)
+                if len(documents) == 1:
+                    options = replace(options, document=documents[0])
+                elif unattended:
+                    raise ValueError("Select a document with --document or PUBLISH_DOCUMENT in unattended mode")
+                else:
+                    options = replace(options, document=_menu("Select a document", documents))
+            template_selected = args.template is not None or args.profile is not None or "PUBLISH_TEMPLATE" in os.environ
+            if not template_selected:
+                model = load_document(ROOT, options.document)
+                default_template = model.get("template")
+                choices = sorted(path.stem for path in (ROOT / "config/profiles").glob("*.yaml"))
+                if unattended:
+                    if default_template:
+                        options = replace(options, template=default_template)
+                    else:
+                        raise ValueError("Select a template with --template or PUBLISH_TEMPLATE in unattended mode")
+                else:
+                    options = replace(options, template=_menu("Select a template", choices, default_template))
         if options.action == "Check":
             return check_dependencies(ROOT, options.format)
         if options.action == "Build":
@@ -62,6 +88,24 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2
     return 2
+
+
+def _menu(title: str, choices: list[str], default: str | None = None) -> str:
+    if not choices:
+        raise ValueError(f"No choices available for {title.lower()}")
+    print(title + ":")
+    for index, choice in enumerate(choices, 1):
+        marker = " (default)" if choice == default else ""
+        print(f"  {index}. {choice}{marker}")
+    while True:
+        answer = input(f"Choose 1-{len(choices)}" + (f" [{choices.index(default) + 1}]" if default in choices else "") + ", or q to cancel: ").strip()
+        if answer.lower() in {"q", "quit", "cancel"}:
+            raise ValueError("Publishing cancelled")
+        if not answer and default in choices:
+            return default
+        if answer.isdigit() and 1 <= int(answer) <= len(choices):
+            return choices[int(answer) - 1]
+        print("Invalid selection; enter a listed number or q to cancel.", file=sys.stderr)
 
 
 if __name__ == "__main__":
