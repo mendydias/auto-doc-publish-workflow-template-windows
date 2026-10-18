@@ -37,7 +37,7 @@ try {
         @{ Id = 'Microsoft.PowerShell'; Command = 'pwsh.exe' },
         @{ Id = 'JohnMacFarlane.Pandoc'; Command = 'pandoc.exe' },
         @{ Id = 'MiKTeX.MiKTeX'; Command = 'lualatex.exe' },
-        @{ Id = 'StrawberryPerl.StrawberryPerl'; Command = 'perl.exe' }
+        @{ Id = 'StrawberryPerl.StrawberryPerl'; Command = 'perl.exe'; Scope = 'machine' }
     )
     foreach ($package in $packages) {
         $existing = Get-Command $package.Command -ErrorAction SilentlyContinue
@@ -45,7 +45,9 @@ try {
             Write-Host "Reusing $($package.Id): $($existing.Source)"
             continue
         }
-        $arguments = @('install','--id',$package.Id,'--exact','--scope','user','--silent')
+        $scope = 'user'
+        if ($package.ContainsKey('Scope')) { $scope = $package.Scope }
+        $arguments = @('install','--id',$package.Id,'--exact','--scope',$scope,'--silent')
         if ($agreementsAccepted) { $arguments += @('--accept-package-agreements','--accept-source-agreements') }
         if ($unattended) { $arguments += '--disable-interactivity' }
         & $winget.Source @arguments
