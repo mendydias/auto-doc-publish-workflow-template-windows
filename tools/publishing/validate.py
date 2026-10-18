@@ -27,16 +27,31 @@ def validate(root: Path, manifest_path: Path) -> list[str]:
         return ["Manifest must contain a YAML mapping"]
     if not isinstance(manifest.get("sources"), list) or not manifest["sources"]:
         errors.append("Manifest sources must be a non-empty ordered list")
-    if not isinstance(manifest.get("title"), str) or not manifest["title"].strip():
+    external_metadata = {}
+    if isinstance(manifest.get("metadata"), str):
+        metadata_path = (root / manifest["metadata"]).resolve()
+        if not metadata_path.is_relative_to(root.resolve()) or not metadata_path.is_file():
+            errors.append(f"Missing or unsafe metadata file: {manifest['metadata']}")
+        else:
+            try:
+                external_metadata = yaml.safe_load(metadata_path.read_text(encoding="utf-8")) or {}
+            except yaml.YAMLError as error:
+                errors.append(f"Invalid metadata YAML: {error}")
+    if not isinstance(manifest.get("title", external_metadata.get("title")), str) or not manifest.get("title", external_metadata.get("title", "")).strip():
         errors.append("Manifest requires a non-empty title")
-    if not isinstance(manifest.get("author"), (str, list)) or not manifest["author"]:
+    if not isinstance(manifest.get("author", external_metadata.get("author", external_metadata.get("authors"))), (str, list)) or not manifest.get("author", external_metadata.get("author", external_metadata.get("authors"))):
         errors.append("Manifest requires an author string or ordered author list")
-    if not isinstance(manifest.get("metadata", {}), dict):
+    if not isinstance(manifest.get("metadata", {}), (dict, str)):
         errors.append("Manifest metadata must be a YAML mapping")
-    output = manifest.get("output", "")
+    output = manifest.get("basename", manifest.get("output", ""))
     if not isinstance(output, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", output):
         errors.append("Output basename must be a safe alphanumeric name")
-    for rel in [*manifest.get("sources", []), *([manifest["bibliography"]] if manifest.get("bibliography") else [])]:
+    bibliography = manifest.get("bibliography", [])
+    bibliography = [bibliography] if isinstance(bibliography, str) else bibliography
+    if not isinstance(bibliography, list):
+        errors.append("Manifest bibliography must be a path or list of paths")
+        bibliography = []
+    for rel in [*manifest.get("sources", []), *bibliography, *([manifest["metadata"]] if isinstance(manifest.get("metadata"), str) else [])]:
         if not isinstance(rel, str):
             errors.append(f"Manifest path must be a string: {rel!r}")
             continue
@@ -104,13 +119,14 @@ def validate(root: Path, manifest_path: Path) -> list[str]:
         resource = (root / target).resolve()
         if not resource.is_relative_to(root.resolve()) or not resource.is_file():
             errors.append(f"Missing or unsafe resource: {target}")
-    bibliography = manifest.get("bibliography")
     if bibliography:
         try:
             import bibtexparser
-            with (root / bibliography).open(encoding="utf-8") as bib_file:
-                db = bibtexparser.load(bib_file)
-            keys = [entry["ID"] for entry in db.entries]
+            keys = []
+            for bibliography_path in bibliography:
+                with (root / bibliography_path).open(encoding="utf-8") as bib_file:
+                    db = bibtexparser.load(bib_file)
+                keys.extend(entry["ID"] for entry in db.entries)
             errors.extend(f"Duplicate bibliography key: {key}" for key in sorted({key for key in keys if keys.count(key) > 1}))
             available = set(keys)
             missing = sorted(set(citations) - label_references - available)

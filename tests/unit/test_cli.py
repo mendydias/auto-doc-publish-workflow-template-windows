@@ -3,7 +3,7 @@ from tools.publishing.__main__ import parser
 
 def test_public_defaults_and_choices() -> None:
     args = parser().parse_args([])
-    assert (args.action, args.format, args.profile, args.typography) == ("Build", "pdf", "article", "default")
+    assert (args.action, args.format, args.profile, args.typography) == ("Build", "pdf", None, None)
 
 
 def test_all_format_and_thesis_arguments() -> None:
