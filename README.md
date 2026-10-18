@@ -13,7 +13,7 @@ packages and their agreements before running it. To run unattended, use
 `-NonInteractive -AcceptAgreements`. It does not change execution policy or
 silently elevate. Setup logs are written to `build/setup/`.
 
-## Author documents
+## Document sources
 
 Each publication lives in its own folder. Copy a folder to start another
 document, then update its metadata and content:
@@ -30,12 +30,12 @@ sources/
       figure.svg
 ```
 
-The folder name is the document ID and default output basename. `document.yaml`
-contains the title, structured authors, and optional template, typography,
-venue, abstract, keywords, and bibliography settings. Numbered Markdown files
-directly under `sections/` are ordered numerically. An explicit ordered
-`sections` list can be used when needed. Bibliographies and assets belong in
-the document folder; their paths are relative to that folder.
+The folder name is intended to be the document ID and default output basename.
+`document.yaml` contains the title, structured authors, and optional template,
+typography, venue, abstract, keywords, and bibliography settings. Numbered
+Markdown files directly under `sections/` are ordered numerically. An explicit
+ordered `sections` list can be used when needed. Bibliographies and assets
+belong in the document folder; their paths are relative to that folder.
 
 Example metadata:
 
@@ -57,13 +57,21 @@ and image paths relative to the document folder. See
 `sources/` for examples. IEEE documents additionally require an abstract,
 keywords, and author affiliations.
 
+**Publishing limitation:** the unified `sources/<id>/` layout and its loader
+are not yet wired into the build, validation, or submission commands. Those
+commands still require a legacy `config/documents/<id>.yaml` manifest. No such
+manifests are currently shipped in this repository, so the example source
+folders are authoring examples, not currently buildable publications. See
+[`docs/configuration.md`](docs/configuration.md) for the migration status.
+
 ## Publishing
 
-With multiple documents, `publish.ps1` displays a numbered document menu and a
-template menu. A single document is selected automatically. The default format
-is PDF; template restrictions and defaults are applied during validation.
-Artifacts and diagnostics are kept under `build/<document>/`. Generated files
-are not source files and can be recreated at any time.
+The intended default format is PDF; template restrictions and defaults are
+applied during validation. For documents supported by the current legacy
+renderer, artifacts and diagnostics are kept under
+`build/<document>/<template>/<typography>/<format>/`. Generated files are not
+source files and can be recreated at any time. The source examples in this
+checkout cannot yet be published with these commands; see the limitation above.
 
 For automation, provide choices through environment variables; scripts do
 not prompt in CI or when stdin is redirected:
@@ -86,23 +94,19 @@ for the template option.
 
 Shared configuration belongs in `config/`, maintained templates in
 `templates/`, and generated output in `build/`. Template-specific metadata and
-format support are documented in [configuration reference](docs/configuration.md).
-The Python entrypoint also supports validation, linting, watch, packaging, and
-cleanup actions; see `python -m tools.publishing --help`.
-
-The repository still carries compatibility support for legacy manifests in
-`config/documents/`. New authoring should use the folder layout above. The
-normalized loader and renderer migration is not yet complete, so existing
-publishing commands continue to resolve legacy manifests until that integration
-is finished.
+format support are documented in the
+[configuration reference](docs/configuration.md). The Python entrypoint also
+supports dependency checks, linting, watch, validation, packaging, tests,
+handoff, and cleanup; see `python -m tools.publishing --help`. These publishing
+actions currently depend on legacy manifests as described above.
 
 ## Verification and limitations
 
-Run `python -m pytest` for the test suite. The current Linux development run
-passed 54 tests with one Windows-only test skipped. Static workflow edits are
-not evidence of a
-successful GitHub Actions run. Windows setup, WinGet package availability,
-MiKTeX package/font provisioning, PDF smoke tests, and end-to-end publishing
+Run `python -m pytest` for the test suite. Test counts depend on the current
+checkout; the recorded acceptance run is in
+[`docs/ieee-acceptance.md`](docs/ieee-acceptance.md). Static workflow edits are
+not evidence of a successful GitHub Actions run. Windows setup, WinGet package
+availability, MiKTeX package/font provisioning, PDF smoke tests, and end-to-end publishing
 must still be verified on a real Windows machine. In particular, the bootstrap
 currently provisions the primary tools and Python environment but does not yet
 automate every TeX package, font, or pinned `pandoc-crossref` check described
