@@ -1,0 +1,23 @@
+\documentclass[$for(classoption)$$classoption$$sep$,$endfor$]{$documentclass$}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{cite}
+\usepackage[hidelinks]{hyperref}
+\ifdefined\IEEEoverridecommandlockouts
+$if(funding)$\IEEEoverridecommandlockouts$endif$
+\fi
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\providecommand{\pandocbounded}[1]{#1}
+\begin{document}
+\title{$title$}
+\author{\IEEEauthorblockN{$for(authors)$$authors.name$$sep$ \and $endfor$}
+\IEEEauthorblockA{$for(authors)$$authors.affiliation$$sep$\\ $endfor$}$if(funding)$\thanks{$funding$}$endif$}
+\maketitle
+$if(abstract)$\begin{abstract}$abstract$\end{abstract}$endif$
+$if(keywords)$\begin{IEEEkeywords}$for(keywords)$$keywords$$sep$, $endfor$\end{IEEEkeywords}$endif$
+$body$
+\bibliographystyle{$bibliography-style$}
+\bibliography{$bibliography$}
+\end{document}
