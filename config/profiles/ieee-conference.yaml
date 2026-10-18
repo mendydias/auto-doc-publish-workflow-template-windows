@@ -1,0 +1,26 @@
+id: ieee-conference
+documentclass: IEEEtran
+classoption:
+  - conference
+structure: flat
+top-level-division: section
+number-sections: true
+template: templates/ieee/conference.tex
+latex-engine: pdflatex
+bibliography:
+  processor: bibtex
+  style: templates/ieee/upstream/IEEEtran.bst
+typography:
+  default: ieee
+  allowed:
+    - ieee
+formats:
+  - latex
+  - pdf
+restrictions:
+  forbidden-pandoc-options:
+    - geometry
+    - mainfont
+    - mathfont
+    - fontsize
+    - linestretch
