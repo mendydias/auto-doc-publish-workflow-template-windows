@@ -1,0 +1,15 @@
+% Shared typography defaults layered over Pandoc's standard template.
+\usepackage{titlesec}
+\makeatletter
+\@ifpackageloaded{float}{}{\usepackage{float}}
+\floatstyle{ruled}
+\@ifundefined{codelisting}{%
+  \@ifundefined{c@chapter}{\newfloat{codelisting}{htbp}{lop}}{\newfloat{codelisting}{htbp}{lop}[chapter]}%
+  \floatname{codelisting}{Listing}%
+}{}
+\makeatother
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
+\captionsetup{font=small,labelfont=bf}
+\pagestyle{plain}

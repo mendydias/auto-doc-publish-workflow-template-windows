@@ -56,7 +56,7 @@ For Zotero, use Better BibTeX and stable citation keys. Export a project bibliog
 
 ## Validation, watch, and cleanup
 
-`Lint` validates YAML manifests, source/resource paths, duplicate BibTeX keys, citation keys, duplicate labels, unresolved cross-references, and Pandoc-parsed Markdown; it then runs the pinned PyMarkdown linter with Pandoc-oriented configuration. Negative fixtures and test cases exercise failures. Watch polls source/manifest files, debounces edits, and runs builds synchronously (no overlapping builds); build outputs are not watched. Ctrl+C stops cleanly.
+`Lint` validates YAML manifests, source/resource paths, duplicate BibTeX keys, citation keys, duplicate labels, unresolved cross-references, and Pandoc-parsed Markdown; it then runs pinned Ruff and PyMarkdown with Pandoc-oriented configuration. Negative fixtures and test cases exercise failures. Watch polls source/manifest/resource/template/config inputs, debounces edits, and runs builds synchronously (no overlapping builds); build outputs are not watched. Ctrl+C stops cleanly.
 
 `Clean` removes generated contents only under repository `build/`, retaining `.gitkeep`. It preflights symlinks and Windows junctions and refuses unsafe paths rather than traversing outside the intended directory.
 

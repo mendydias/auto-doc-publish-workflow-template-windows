@@ -37,7 +37,10 @@ else {
     $python = $null
     foreach ($candidate in @('python.exe','python3.exe','py.exe')) {
         $command = Get-Command $candidate -ErrorAction SilentlyContinue
-        if ($command) { $python = $command.Source; break }
+        if (-not $command) { continue }
+        if ($candidate -eq 'py.exe') { & $command.Source -3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3,11) else 1)' 2>$null }
+        else { & $command.Source -c 'import sys; raise SystemExit(0 if sys.version_info >= (3,11) else 1)' 2>$null }
+        if ($LASTEXITCODE -eq 0) { $python = $command.Source; break }
     }
     if (-not $python) { [Console]::Error.WriteLine('Python 3.11+ not found. Create .venv or install Python; no software was installed.'); exit 2 }
     if ([IO.Path]::GetFileName($python) -ieq 'py.exe') { $pythonArgs = @('-3','-m','tools.publishing') }

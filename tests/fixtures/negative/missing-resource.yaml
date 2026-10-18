@@ -1,0 +1,4 @@
+title: Missing source fixture
+output: missing
+sources:
+  - not-here.md

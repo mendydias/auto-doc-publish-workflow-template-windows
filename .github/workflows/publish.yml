@@ -68,7 +68,7 @@ jobs:
           latexmk -v | Select-Object -First 1
           perl --version | Select-Object -First 2
       - name: Unit tests and lint
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && matrix.document == 'example' && matrix.profile == 'article' && matrix.format == 'pdf'
         shell: pwsh
         run: |
           ./publish.ps1 -Action Test
@@ -76,6 +76,11 @@ jobs:
           ./publish.ps1 -Action Lint
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build publication
+        if: >-
+          (github.event_name == 'pull_request' && matrix.format != 'all') ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main' && matrix.format == 'all') ||
+          (startsWith(github.ref, 'refs/tags/v') && matrix.format == 'all') ||
+          (github.event_name == 'workflow_dispatch' && matrix.document == 'example' && matrix.profile == 'article' && matrix.format == 'pdf')
         shell: pwsh
         env:
           DOC: ${{ github.event.inputs.document || matrix.document }}

@@ -8,3 +8,13 @@
 \setlength{\headheight}{14pt}
 \providecommand{\frontmatter}{\pagenumbering{roman}\setcounter{page}{1}}
 \providecommand{\mainmatter}{\clearpage\pagenumbering{arabic}\setcounter{page}{1}}
+% pandoc-crossref emits a captioned listing float; retain a definition when thesis
+% configuration suppresses the filter's otherwise automatic float preamble.
+\makeatletter
+\@ifundefined{codelisting}{%
+  \@ifpackageloaded{float}{}{\usepackage{float}}%
+  \floatstyle{ruled}%
+  \@ifundefined{c@chapter}{\newfloat{codelisting}{h}{lop}}{\newfloat{codelisting}{h}{lop}[chapter]}%
+  \floatname{codelisting}{Listing}%
+}{}
+\makeatother

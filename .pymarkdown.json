@@ -1,9 +1,9 @@
 {
   "plugins": {
     "md013": {"enabled": false},
+    "md031": {"enabled": false},
     "md033": {"enabled": false},
     "md034": {"enabled": false},
     "md041": {"enabled": false}
-  },
-  "extensions": {"markdown": {"enabled": true}}
+  }
 }

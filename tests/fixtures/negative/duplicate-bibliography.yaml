@@ -1,0 +1,6 @@
+title: Duplicate key fixture
+author: Test Author
+output: duplicate-keys
+sources:
+  - sources/example/01-introduction.md
+bibliography: tests/fixtures/negative/duplicate-keys.bib

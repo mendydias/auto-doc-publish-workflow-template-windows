@@ -9,7 +9,7 @@ from pathlib import Path
 from .build import build
 from .clean import clean
 from .dependencies import check_dependencies
-from .validate import lint, validate
+from .validate import lint
 from .watch import watch
 from .handoff import generate as generate_handoff
 
@@ -36,7 +36,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.action == "Lint":
             return lint(ROOT)
         if args.action == "Test":
-            import pytest
+            try:
+                import pytest
+            except ImportError:
+                print("pytest is missing; create the project environment with .\\scripts\\setup.ps1", file=sys.stderr)
+                return 2
             return int(pytest.main([str(ROOT / "tests"), "-ra"]))
         if args.action == "Watch":
             return watch(ROOT, args.document, args.profile, args.typography, args.format)

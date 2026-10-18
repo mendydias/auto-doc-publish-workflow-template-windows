@@ -52,22 +52,38 @@ def build(root: Path, document: str, profile: str, typography: str, format_name:
         for key, value in {**format_defaults, **latex_settings}.items():
             if key in ("from", "to", "standalone", "filters", "pdf-engine", "css", "reference-doc", "epub-chapter-level", "embed-resources", "include-before-body", "include-in-header"):
                 continue
-            if isinstance(value, bool):
+            option = key.replace("_", "-")
+            if key == "numbersections":
                 if value:
-                    args.append(f"--{key}")
+                    args.append("--number-sections")
+            elif key == "documentclass":
+                args += ["--metadata", f"documentclass={value}"]
+            elif isinstance(value, bool):
+                if value:
+                    args.append(f"--{option}")
             elif isinstance(value, list):
                 for item in value:
-                    args += [f"--{key}", str(item)]
+                    args += ["--variable", f"{key}={item}"]
             else:
-                args += [f"--{key}", str(value)]
-        if profile == "thesis" and output_format in ("pdf", "latex"):
-            args += ["--include-in-header", str(root / "templates/latex/thesis-header.tex")]
+                args += ["--variable", f"{key}={value}"]
+        if profile == "thesis":
+            args += ["--metadata", "chapters=true", "--top-level-division=chapter"]
+            if output_format in ("pdf", "latex"):
+                args += ["--include-in-header", str(root / "templates/latex/thesis-header.tex")]
         if output_format == "docx":
-            args += ["--reference-doc", str(root / "templates/docx/reference.docx")]
+            reference_doc = format_defaults.get("reference-doc", "templates/docx/reference.docx")
+            args += ["--reference-doc", str(root / reference_doc)]
         if output_format in ("html", "epub"):
-            args += ["--css", str(root / "templates/html/academic.css")]
+            for css_path in format_defaults.get("css", []):
+                args += ["--css", str(root / css_path)]
+            if format_defaults.get("embed-resources"):
+                args.append("--embed-resources")
+        if output_format == "epub" and format_defaults.get("epub-chapter-level"):
+            args += ["--epub-chapter-level", str(format_defaults["epub-chapter-level"])]
         if output_format == "pdf":
             args += ["--pdf-engine", "lualatex"]
+        if output_format in ("pdf", "latex"):
+            args += ["--lua-filter", str(root / "templates/latex/svg-to-pdf.lua"), "--include-in-header", str(root / "templates/latex/typography.tex")]
         for key in ("title", "author", "date"):
             if manifest.get(key) is not None:
                 args += ["--metadata", f"{key}={manifest[key]}"]
@@ -90,7 +106,7 @@ def build(root: Path, document: str, profile: str, typography: str, format_name:
             code = _command(args, root)
             if code:
                 return code
-            code = _command([shutil.which("latexmk") or "latexmk", "-lualatex", "-interaction=nonstopmode", "-halt-on-error", "-file-line-error", "-outdir=.", tex.name], output_dir)
+            code = _command([shutil.which("latexmk") or "latexmk", "-lualatex", "-interaction=nonstopmode", "-halt-on-error", "-file-line-error", f"-outdir={output_dir}", str(tex)], root)
             if code:
                 return code
             built = output_dir / f"{basename}.pdf"

@@ -27,6 +27,12 @@ def validate(root: Path, manifest_path: Path) -> list[str]:
         return ["Manifest must contain a YAML mapping"]
     if not isinstance(manifest.get("sources"), list) or not manifest["sources"]:
         errors.append("Manifest sources must be a non-empty ordered list")
+    if not isinstance(manifest.get("title"), str) or not manifest["title"].strip():
+        errors.append("Manifest requires a non-empty title")
+    if not isinstance(manifest.get("author"), (str, list)) or not manifest["author"]:
+        errors.append("Manifest requires an author string or ordered author list")
+    if not isinstance(manifest.get("metadata", {}), dict):
+        errors.append("Manifest metadata must be a YAML mapping")
     output = manifest.get("output", "")
     if not isinstance(output, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", output):
         errors.append("Output basename must be a safe alphanumeric name")
@@ -66,10 +72,21 @@ def validate(root: Path, manifest_path: Path) -> list[str]:
                 content = node.get("c", [])
                 if len(content) >= 3 and isinstance(content[2], list) and content[2]:
                     resources.append(content[2][0])
-            attr = node.get("c")
-            if isinstance(attr, list) and attr and isinstance(attr[0], list) and len(attr[0]) >= 1 and isinstance(attr[0][0], str):
-                if attr[0][0]:
-                    identifiers.append(attr[0][0])
+            content = node.get("c")
+            attr_index = {"Header": 1, "Figure": 0, "Table": 0, "CodeBlock": 0, "Div": 0, "Span": 0, "Image": 0}.get(node.get("t"))
+            if attr_index is not None and isinstance(content, list) and len(content) > attr_index:
+                attr = content[attr_index]
+                if isinstance(attr, list) and len(attr) == 3 and isinstance(attr[0], str) and attr[0]:
+                    identifiers.append(attr[0])
+            # Pandoc represents the equation label suffix as a Str adjacent to a Math
+            # block (rather than an Attr); inspect that parsed AST context, not raw MD.
+            if node.get("t") == "Para" and isinstance(content, list):
+                if any(isinstance(child, dict) and child.get("t") == "Math" and child.get("c", [{}])[0].get("t") == "DisplayMath" for child in content):
+                    for child in content:
+                        if isinstance(child, dict) and child.get("t") == "Str":
+                            text = child.get("c", "")
+                            if isinstance(text, str) and text.startswith("{#eq:") and text.endswith("}"):
+                                identifiers.append(text[2:-1])
             for value in node.values():
                 visit(value)
         elif isinstance(node, list):
@@ -111,10 +128,26 @@ def lint(root: Path) -> int:
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
+    ruff = shutil.which("ruff")
+    if not ruff:
+        local_ruff = Path(sys.executable).parent / ("ruff.exe" if sys.platform == "win32" else "ruff")
+        if local_ruff.is_file():
+            ruff = str(local_ruff)
+    if ruff:
+        result = subprocess.run([ruff, "check", str(root / "tools"), str(root / "tests")], cwd=root, check=False)
+        if result.returncode:
+            return result.returncode
+    else:
+        print("Ruff is missing; install pinned project dev dependencies with scripts/setup.ps1", file=sys.stderr)
+        return 2
     markdownlint = shutil.which("pymarkdown")
+    if not markdownlint:
+        local = Path(sys.executable).parent / ("pymarkdown.exe" if sys.platform == "win32" else "pymarkdown")
+        if local.is_file():
+            markdownlint = str(local)
     if markdownlint:
         sources = [str(path) for path in sorted((root / "sources").rglob("*.md"))]
-        result = subprocess.run([markdownlint, "scan", "--config", str(root / ".pymarkdown.json"), *sources], cwd=root, check=False)
+        result = subprocess.run([markdownlint, "--config", str(root / ".pymarkdown.json"), "scan", *sources], cwd=root, check=False)
         if result.returncode:
             return result.returncode
     else:

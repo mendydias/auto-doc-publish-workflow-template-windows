@@ -6,7 +6,6 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 PDF_TOOLS = ("lualatex", "latexmk", "kpsewhich")
@@ -40,7 +39,18 @@ def check_dependencies(root: Path, format_name: str) -> int:
         failed |= code != 0
     if "pandoc" in versions and "pandoc-crossref" in versions:
         pandoc_version = re.search(r"pandoc\s+(\d+)\.(\d+)", versions["pandoc"], re.I)
+        if not pandoc_version:
+            print("INCOMPATIBLE: could not parse Pandoc version output")
+            failed = True
+        if pandoc_version:
+            major, minor = map(int, pandoc_version.group(1, 2))
+            if major != 3 or minor < 1:
+                print(f"UNSUPPORTED Pandoc version {major}.{minor}; supported range is >=3.1,<4.0")
+                failed = True
         crossref_version = re.search(r"built with Pandoc v?(\d+)\.(\d+)", versions["pandoc-crossref"], re.I)
+        if not crossref_version:
+            print("INCOMPATIBLE: pandoc-crossref does not report the Pandoc version it was built against")
+            failed = True
         if pandoc_version and crossref_version and pandoc_version.group(1, 2) != crossref_version.group(1, 2):
             print(f"INCOMPATIBLE pandoc-crossref built for {crossref_version.group(1)}.{crossref_version.group(2)} but Pandoc is {pandoc_version.group(1)}.{pandoc_version.group(2)}")
             failed = True
@@ -48,7 +58,7 @@ def check_dependencies(root: Path, format_name: str) -> int:
         print("MISSING Python: requires 3.11 or later")
         failed = True
     if "pdf" in formats:
-        for package in ("article.cls", "report.cls", "fontspec.sty", "unicode-math.sty", "xurl.sty"):
+        for package in ("article.cls", "report.cls", "fontspec.sty", "unicode-math.sty", "xurl.sty", "caption.sty", "fancyhdr.sty", "titlesec.sty"):
             code, text = _run("kpsewhich", [package])
             if code or not text.strip():
                 print(f"MISSING TeX package/class: {package}")
@@ -59,7 +69,7 @@ def check_dependencies(root: Path, format_name: str) -> int:
         tex_root = root / "build" / "cache" / "font-probe"
         tex_root.mkdir(parents=True, exist_ok=True)
         source = tex_root / "font-probe.tex"
-        source.write_text(r"\documentclass{article}" "\n" r"\usepackage{fontspec}" "\n" r"\usepackage{unicode-math}" "\n" r"\setmainfont{Libertinus Serif}" "\n" r"\setmathfont{Libertinus Math}" "\n" r"\begin{document}Unicode — naïve café; $\\alpha+1$.\end{document}" "\n", encoding="utf-8")
+        source.write_text(r"\documentclass{article}" "\n" r"\usepackage{fontspec}" "\n" r"\usepackage{unicode-math}" "\n" r"\setmainfont{Libertinus Serif}" "\n" r"\setmathfont{Libertinus Math}" "\n" r"\begin{document}Unicode — naïve café; $\alpha+1$.\end{document}" "\n", encoding="utf-8")
         code, text = _run("lualatex", ["-interaction=nonstopmode", "-halt-on-error", "-output-directory", str(tex_root), str(source)])
         if code:
             print("FONT PROBE FAILED: Libertinus Serif / Libertinus Math did not resolve in LuaLaTeX")
@@ -67,4 +77,11 @@ def check_dependencies(root: Path, format_name: str) -> int:
             failed = True
         else:
             print("OK fonts: Libertinus Serif and Libertinus Math resolved in LuaLaTeX")
+        code, text = _run("latexmk", ["-lualatex", "-interaction=nonstopmode", "-halt-on-error", f"-outdir={tex_root}", str(source)])
+        if code or not (tex_root / "font-probe.pdf").is_file():
+            print("LATEXMK PROBE FAILED: latexmk could not compile the minimal LuaLaTeX document")
+            print("\n".join(text.splitlines()[-12:]))
+            failed = True
+        else:
+            print("OK latexmk: minimal LuaLaTeX compile succeeded")
     return 1 if failed else 0

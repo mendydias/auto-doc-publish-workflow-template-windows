@@ -1,0 +1,6 @@
+title: Invalid references fixture
+author: Test Author
+output: invalid-references
+sources:
+  - tests/fixtures/negative/invalid-references.md
+bibliography: references/references.bib

@@ -1,6 +1,6 @@
 # Introduction {#sec:intro}
 
-Unicode publishing works: naïve readers can read Ελληνικά, café, and mathematical symbols such as $\alpha$ with suitable fonts. Smith and Lee (@smith2021) describe complementary techniques; prior research supports this approach [@smith2021; @jones2020, p. 17].
+Unicode publishing works: naïve readers can read Ελληνικά, café, and mathematical symbols such as $\alpha$ with suitable fonts. @smith2021 describes complementary techniques; prior research supports this approach [@smith2021; @jones2020, p. 17].
 
 ![A schematic workflow](assets/workflow.svg){#fig:workflow width=70%}
 

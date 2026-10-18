@@ -11,8 +11,7 @@ This second source demonstrates ordered composition and cross-file references. T
 
 : Supported publication formats {#tbl:summary}
 
-```python
+```{#lst:manifest .python caption="Manifest ordering"}
 def ordered_sources(manifest):
     return list(manifest["sources"])
 ```
-{#lst:manifest caption="Manifest ordering"}
