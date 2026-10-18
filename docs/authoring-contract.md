@@ -88,6 +88,5 @@ affiliations. These requirements are validated by the selected template and
 documented in that template's authoring guide. Missing required metadata is an
 actionable validation error, not a reason to fall back to another template.
 
-This contract is the target authoring interface. Legacy manifests may be
-accepted temporarily during migration, but new documents should use this
-layout exclusively.
+This is the sole supported authoring interface. The publisher does not load
+legacy manifests or sources outside a document folder.

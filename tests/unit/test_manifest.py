@@ -20,7 +20,9 @@ def test_duplicate_bibliography_keys_are_rejected() -> None:
 
 def test_example_manifest_validates_citations_and_references() -> None:
     root = Path(__file__).resolve().parents[2]
-    assert validate(root, root / "config/documents/example.yaml") == []
+    from tools.publishing.resolve_document import resolve_document
+
+    assert validate(root, resolve_document(root, "example")["manifest"]) == []
 
 
 def test_duplicate_labels_missing_citation_and_unresolved_reference_fail() -> None:

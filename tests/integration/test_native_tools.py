@@ -20,7 +20,7 @@ def test_manifest_build_matrix_has_semantic_artifacts(profile: str, format_name:
 
     if not shutil.which("pandoc"):
         pytest.skip("Pandoc is unavailable")
-    source_paths = [ROOT / "sources/example/01-introduction.md", ROOT / "sources/example/02-methods.md"]
+    source_paths = [ROOT / "sources/example/sections/01-introduction.md", ROOT / "sources/example/sections/02-methods.md"]
     before = [path.read_bytes() for path in source_paths]
     assert build(ROOT, "example", profile, "academic", format_name) == 0
     output_dir = ROOT / "build/example" / profile / "academic" / format_name
@@ -108,7 +108,7 @@ def test_pandoc_exports_have_semantic_content(tmp_path: Path, format_name: str, 
     if not pandoc:
         pytest.skip("Pandoc is unavailable")
     output = tmp_path / ("sample" + extension)
-    args = [pandoc, str(ROOT / "sources/example/01-introduction.md"), str(ROOT / "sources/example/02-methods.md"), "--standalone", "--resource-path", str(ROOT), "--output", str(output)]
+    args = [pandoc, str(ROOT / "sources/example/sections/01-introduction.md"), str(ROOT / "sources/example/sections/02-methods.md"), "--standalone", "--resource-path", str(ROOT / "sources/example"), "--output", str(output)]
     if format_name == "latex":
         args += ["--to", "latex"]
     else:

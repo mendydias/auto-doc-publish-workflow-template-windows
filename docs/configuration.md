@@ -11,11 +11,11 @@ relative to the document folder and must not escape it. See
 [the authoring contract](authoring-contract.md) for the shared schema and
 template-specific metadata requirements.
 
-All publishing commands consume the normalized document model. A unified
-`sources/<id>/document.yaml` is authoritative when present; otherwise the
-loader adapts a legacy `config/documents/<id>.yaml` manifest. Unified resource
-paths are relative to the document folder, while legacy manifest paths remain
-repository-relative. Do not maintain competing metadata in both layouts.
+All publishing commands require `sources/<id>/document.yaml`. There is no
+legacy manifest fallback. Sections, bibliographies, and assets belong in the
+document folder; resource paths are relative to it. Shared profiles, venues,
+typography, formats, and renderer templates remain maintainer-owned under
+`config/` and `templates/`.
 
 ## Shared publishing configuration
 
@@ -29,8 +29,7 @@ repository-relative. Do not maintain competing metadata in both layouts.
 | `templates/` | Maintained renderer templates and their assets |
 | `build/` | Generated output, logs, caches, setup diagnostics, and resolved settings |
 
-Legacy manifest and profile resource paths are repository-relative. Document
-IDs, template IDs, typography IDs, and venue IDs use letters, digits, hyphens,
+Document IDs, template IDs, typography IDs, and venue IDs use letters, digits, hyphens,
 and underscores. The renderer validates repository boundaries and safe output
 basenames. Supported LaTeX engines are `pdflatex`, `lualatex`, and `xelatex`;
 bibliography processors are `citeproc`, `bibtex`, and `biber`. Configuration

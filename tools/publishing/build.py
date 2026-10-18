@@ -116,6 +116,11 @@ def build(root: Path, document: str, profile: str | None, typography: str | None
             args += ["--pdf-engine", "lualatex"]
         if output_format in ("pdf", "latex"):
             args += ["--lua-filter", str(root / "templates/latex/svg-to-pdf.lua"), "--include-in-header", str(root / "templates/latex/typography.tex")]
+            document_folder = Path(manifest["document_folder"])
+            if (root / document_folder / "assets").is_dir():
+                asset_header = output_dir / "document-assets.tex"
+                asset_header.write_text(f"\\graphicspath{{{{{document_folder.as_posix()}/}}}}\n", encoding="utf-8")
+                args += ["--include-in-header", str(asset_header)]
         metadata = dict(manifest.get("metadata", {}))
         for key in ("title", "author", "authors", "date", "abstract", "keywords"):
             if manifest.get(key) is not None:
@@ -193,6 +198,8 @@ def _build_ieee(root: Path, resolved: dict, format_name: str, shared_defaults: d
     args += ["--metadata-file", str(metadata_file)]
     args += ["--variable", f"documentclass={profile.get('documentclass', 'IEEEtran')}"]
     args += ["--variable", "float-placement=b"]
+    document_folder = Path(manifest["document_folder"])
+    args += ["--variable", f"document-assets={document_folder.as_posix()}/"]
     for option in profile.get("classoption", []):
         args += ["--variable", f"classoption={option}"]
     bibliography_style = profile.get("bibliography", {}).get("style")

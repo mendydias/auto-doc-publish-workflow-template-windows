@@ -57,10 +57,9 @@ and image paths relative to the document folder. See
 `sources/` for examples. IEEE documents additionally require an abstract,
 keywords, and author affiliations.
 
-The unified `sources/<id>/` layout is used by build, validation, lint, watch,
-and submission commands. Legacy `config/documents/<id>.yaml` documents remain
-supported when no unified document folder exists; when both are present, the
-unified document is authoritative. See
+All authoring inputs belong under `sources/<id>/`; no parallel manifest or
+repository-level bibliography is needed. Build runs once; Watch rebuilds when
+that document or shared renderer configuration changes. See
 [`docs/configuration.md`](docs/configuration.md) for details.
 
 ## Publishing
@@ -94,8 +93,7 @@ Shared configuration belongs in `config/`, maintained templates in
 format support are documented in the
 [configuration reference](docs/configuration.md). The Python entrypoint also
 supports dependency checks, linting, watch, validation, packaging, tests,
-handoff, and cleanup; see `python -m tools.publishing --help`. These publishing
-actions currently depend on legacy manifests as described above.
+handoff, and cleanup; see `python -m tools.publishing --help`.
 
 ## Verification and limitations
 

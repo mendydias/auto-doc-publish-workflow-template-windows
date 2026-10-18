@@ -28,7 +28,7 @@ def test_cli_profile_selection_overrides_manifest_default() -> None:
 
 
 def test_new_numbered_sections_override_legacy_source_list(tmp_path: Path) -> None:
-    for directory in ("config", "sources/ieee-example", "src/ieee-example", "templates"):
+    for directory in ("config", "sources/ieee-example", "templates"):
         shutil.copytree(ROOT / directory, tmp_path / directory)
 
     first = resolve_document(tmp_path, "ieee-example")

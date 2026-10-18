@@ -14,6 +14,9 @@ keywords:
   - reproducible publishing
   - document automation
   - academic writing
+metadata:
+  funding: This example is illustrative and is not associated with funded research.
+  lang: en-US
 date: "2026"
 template: ieee-conference
 venue: example-conference

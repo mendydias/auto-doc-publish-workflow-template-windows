@@ -33,5 +33,5 @@ def test_ieee_latex_pdf_and_submission_bundle() -> None:
         names = set(bundle.namelist())
     assert "IEEEtran.cls" in names
     assert "sources/ieee-example/references.bib" in names
-    assert "assets/workflow.pdf" in names
+    assert "sources/ieee-example/assets/workflow.pdf" in names
     assert not any(name.endswith((".log", ".aux", ".fls", ".synctex.gz")) for name in names)

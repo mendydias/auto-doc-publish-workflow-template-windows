@@ -28,7 +28,7 @@ The updated authoring contract and sample `sources/<id>/document.yaml` files
 are present, and unit tests cover discovery, numeric section ordering, Unicode
 filenames, duplicate section numbers, traversal, symlink escapes, and CLI
 option precedence. The new-layout loader is not yet consumed by the main
-renderers; legacy manifests remain required for real builds. The Windows
+renderers; unified source folders are the supported build input. The Windows
 bootstrap and workflow have only been edited and statically inspected here:
 WinGet package installation, agreements, TeX/font provisioning, setup
 repeatability, actual Windows PowerShell behavior, and GitHub Actions execution
