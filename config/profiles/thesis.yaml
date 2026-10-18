@@ -1,0 +1,5 @@
+documentclass: report
+classoption: [12pt, openany]
+numbersections: true
+include-before-body: [templates/latex/thesis-frontmatter.tex]
+include-in-header: [templates/latex/thesis-header.tex]
