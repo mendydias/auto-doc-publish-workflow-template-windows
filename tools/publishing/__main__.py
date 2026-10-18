@@ -53,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
                 return 2
             return int(pytest.main([str(ROOT / "tests"), "-ra"]))
         if options.action == "Watch":
-            return watch(ROOT, options.document, options.template or "article", options.typography or "default", options.format)
+            return watch(ROOT, options.document, options.template or "article", options.typography or "default", options.format, options.venue)
         if options.action == "Clean":
             return clean(ROOT)
         if options.action == "Handoff":

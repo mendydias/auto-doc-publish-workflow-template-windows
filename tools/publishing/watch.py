@@ -35,7 +35,7 @@ def wait_for_quiet(root: Path, manifest: Path, state: dict[Path, int], quiet_per
             return state
 
 
-def watch(root: Path, document: str, profile: str, typography: str, format_name: str) -> int:
+def watch(root: Path, document: str, profile: str, typography: str, format_name: str, venue: str | None = None) -> int:
     manifest = root / "config/documents" / f"{document}.yaml"
     state = _snapshot(root, manifest)
     print("Watching sources (Ctrl+C to stop)")
@@ -49,7 +49,7 @@ def watch(root: Path, document: str, profile: str, typography: str, format_name:
             if changed:
                 state = wait_for_quiet(root, manifest, state)
                 print("Change detected; rebuilding")
-                build(root, document, profile, typography, format_name)
+                build(root, document, profile, typography, format_name, venue)
     except KeyboardInterrupt:
         print("Watch stopped")
         return 0
