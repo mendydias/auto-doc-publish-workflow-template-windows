@@ -35,3 +35,30 @@ def test_ieee_latex_pdf_and_submission_bundle() -> None:
     assert "sources/ieee-example/references.bib" in names
     assert "sources/ieee-example/assets/workflow.pdf" in names
     assert not any(name.endswith((".log", ".aux", ".fls", ".synctex.gz")) for name in names)
+
+
+@pytest.mark.skipif(any(not shutil.which(tool) for tool in TOOLS), reason="IEEE native toolchain unavailable")
+def test_ieee_bibliography_only_edit_refreshes_pdf_incrementally(tmp_path: Path) -> None:
+    import subprocess
+
+    for directory in ("config", "templates", "sources/ieee-example"):
+        shutil.copytree(ROOT / directory, tmp_path / directory)
+    bib = tmp_path / "sources/ieee-example/references.bib"
+    assert build(tmp_path, "ieee-example", None, None, "pdf") == 0
+    bbl = tmp_path / "build/ieee-example/ieee-conference/ieee/pdf/ieee-example.bbl"
+    before = bbl.read_text(encoding="utf-8")
+    marker = "https://incremental-url.example.test/updated"
+    bib.write_text(
+        bib.read_text(encoding="utf-8").replace(
+            "year = {1994}", f"year = {{1994}},\n  url = {{{marker}}}"
+        ),
+        encoding="utf-8",
+    )
+    assert marker not in before
+    assert build(tmp_path, "ieee-example", None, None, "pdf") == 0
+    updated = bbl.read_text(encoding="utf-8")
+    assert marker in updated
+    pdf = tmp_path / "build/ieee-example/ieee-conference/ieee/pdf/ieee-example.pdf"
+    if shutil.which("pdftotext"):
+        text = subprocess.run(["pdftotext", str(pdf), "-"], capture_output=True, text=True, check=True).stdout
+        assert marker in "".join(text.split())

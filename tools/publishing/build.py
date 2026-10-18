@@ -64,11 +64,19 @@ def build(root: Path, document: str, profile: str | None, typography: str | None
             "venue": resolved["venue"], "format": output_format,
             "basename": resolved["output"], "supported_formats": list(supported_formats),
             "metadata": manifest.get("metadata", {}),
+            "metadata_file": manifest.get("metadata_file"),
+            "sources": manifest.get("sources", []),
+            "bibliography": bibliography,
+            "assets": manifest.get("assets", []),
         }
         (output_dir / "resolved-config.yaml").write_text(yaml.safe_dump(config_record, sort_keys=False), encoding="utf-8")
         basename = resolved["output"]
         extension = "tex" if output_format == "latex" else output_format
         output = output_dir / f"{basename}.{extension}"
+        print(
+            f"Building {document}: metadata={manifest.get('metadata_file')}; "
+            f"bibliography={', '.join(bibliography) or '(none)'}; output={output.relative_to(root)}"
+        )
         args = [shutil.which("pandoc") or "pandoc", *map(str, sources)]
         for key, value in shared_defaults.items():
             option = key.replace("_", "-")
@@ -178,6 +186,12 @@ def _build_ieee(root: Path, resolved: dict, format_name: str, shared_defaults: d
     output_dir = root / "build" / document / resolved["profile"] / typography / format_name
     output_dir.mkdir(parents=True, exist_ok=True)
     output = output_dir / f"{resolved['output']}.{'tex' if format_name == 'latex' else 'pdf'}"
+    bibliography = manifest.get("bibliography", [])
+    bibliography = [bibliography] if isinstance(bibliography, str) else bibliography
+    print(
+        f"Building {document}: metadata={manifest.get('metadata_file')}; "
+        f"bibliography={', '.join(bibliography) or '(none)'}; output={output.relative_to(root)}"
+    )
     tex_output = output if format_name == "latex" else output_dir / f"{resolved['output']}.tex"
     config_record = {key: value for key, value in resolved.items() if key != "manifest"}
     config_record["manifest"] = manifest
