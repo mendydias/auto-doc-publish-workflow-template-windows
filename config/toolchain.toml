@@ -1,0 +1,15 @@
+[supported]
+pandoc = ">=3.1,<4.0"
+pandoc_crossref = ">=0.3.17,<0.4"
+lualatex = "TeX Live 2024 or later"
+latexmk = ">=4.80"
+python = ">=3.11,<4"
+powershell = ">=7.4"
+
+[ci]
+windows_runner = "windows-2022"
+python = "3.12"
+
+[fonts]
+text = "Libertinus Serif"
+math = "Libertinus Math"
