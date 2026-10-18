@@ -56,14 +56,13 @@ def generate(root: Path) -> int:
     ]
     checks.extend([
         {"name": "Windows-native acceptance", "status": "UNVERIFIED", "detail": "Requires Windows 10/11 and PowerShell 7+; report generation does not execute acceptance."},
-        {"name": "GitHub Actions execution", "status": "UNVERIFIED", "detail": "Workflow configuration is not evidence of a successful run."},
     ])
     payload = {
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "repository": str(root), "commit": commit.stdout.strip() or None,
         "git_status": git.stdout.strip(), "host": platform.platform(),
         "python": sys.version, "tools": tools, "checks": checks,
-        "implemented": ["PowerShell/Python CLI", "ordered YAML manifests", "article/report/thesis profiles", "PDF/LaTeX/DOCX/HTML/EPUB pipeline", "AST-driven citation/reference/resource validation", "typography presets", "watch and cleanup", "semantic export tests", "Windows Actions workflow"],
+        "implemented": ["PowerShell/Python CLI", "ordered YAML manifests", "article/report/thesis profiles", "PDF/LaTeX/DOCX/HTML/EPUB pipeline", "AST-driven citation/reference/resource validation", "typography presets", "watch and cleanup", "semantic export tests"],
         "verification_boundary": "This report does not perform Windows acceptance. Linux checks and mocks do not establish Windows support.",
         "acceptance_commands": ACCEPTANCE,
     }
@@ -79,7 +78,7 @@ def generate(root: Path) -> int:
         lines.append(f"| {check['name']} | **{check['status']}** | {detail} |")
     lines += ["", "## Continue safely", "", "1. Review the current commit and working tree before editing; preserve uncommitted work.", "2. Read `README.md`, `config/toolchain.toml`, and the repository's Windows verification notes.", "3. On Windows 10/11 with PowerShell 7+, install only project-local Python dependencies using `pwsh -NoProfile -File .\\scripts\\setup.ps1` (publishing tools are managed separately by the workstation/runner owner).", "4. Run the acceptance commands below and record exact outcomes. Do not claim acceptance based on Linux or mocked runs.", "5. Fix failures in focused increments and commit each completed plan step; keep generated artifacts under ignored `build/`.", "", "## Required Windows acceptance", ""]
     lines.extend(f"- [ ] `{command}`" for command in ACCEPTANCE)
-    lines += ["", "## Known verification boundary", "", str(payload["verification_boundary"]), "The workflow file can be inspected statically here, but no GitHub Actions run or Windows acceptance is claimed.", ""]
+    lines += ["", "## Known verification boundary", "", str(payload["verification_boundary"]), "No Windows acceptance is claimed.", ""]
     md_path = report_dir / "windows-handoff.md"
     md_path.write_text("\n".join(lines), encoding="utf-8")
     print(f"Wrote {md_path.relative_to(root)}")

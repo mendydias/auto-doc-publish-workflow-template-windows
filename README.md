@@ -105,8 +105,7 @@ points to the LaTeX/viewer stage; a failed build leaves the prior PDF in place.
 
 Run `python -m pytest` for the test suite. Test counts depend on the current
 checkout; the recorded acceptance run is in
-[`docs/ieee-acceptance.md`](docs/ieee-acceptance.md). Static workflow edits are
-not evidence of a successful GitHub Actions run. Windows setup, WinGet package
+[`docs/ieee-acceptance.md`](docs/ieee-acceptance.md). Windows setup, WinGet package
 availability, MiKTeX package/font provisioning, PDF smoke tests, and end-to-end publishing
 must still be verified on a real Windows machine. In particular, the bootstrap
 currently provisions the primary tools and Python environment but does not yet

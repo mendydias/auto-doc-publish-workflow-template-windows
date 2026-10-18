@@ -32,6 +32,14 @@ def _config(root: Path, directory: str, name: str, label: str) -> dict[str, Any]
     return _load(path, label)
 
 
+def _validate_resource(root: Path, rel: object, label: str) -> None:
+    if not isinstance(rel, str) or not rel:
+        raise ValueError(f"{label} must be a non-empty repository-relative path")
+    candidate = (root / rel).resolve()
+    if not candidate.is_relative_to(root) or not candidate.is_file():
+        raise ValueError(f"Missing or unsafe {label}: {rel}")
+
+
 def resolve_document(
     root: Path,
     document: str,
@@ -137,9 +145,39 @@ def resolve_document(
             raise ValueError(f"Missing resource: {rel}")
     for rel in (profile_config.get("template"), profile_config.get("bibliography", {}).get("style")):
         if rel:
-            candidate = (root / rel).resolve()
-            if not candidate.is_relative_to(root) or not candidate.is_file():
-                raise ValueError(f"Missing or unsafe profile resource: {rel}")
+            _validate_resource(root, rel, "profile resource")
+    for key in ("include-before-body", "include-in-header"):
+        includes = profile_config.get(key, [])
+        if isinstance(includes, str):
+            includes = [includes]
+        if not isinstance(includes, list):
+            raise ValueError(f"Profile {key} must be a path or list of paths")
+        for rel in includes:
+            _validate_resource(root, rel, f"profile {key} resource")
+    for rel in ("templates/latex/typography.tex", "templates/latex/svg-to-pdf.lua"):
+        _validate_resource(root, rel, "shared LaTeX template resource")
+    if selected_profile == "ieee-conference":
+        _validate_resource(root, "templates/ieee/upstream/IEEEtran.cls", "IEEE class")
+    for format_name in profile_config.get("formats", SUPPORTED_FORMATS):
+        format_path = root / "config" / "formats" / f"{format_name}.yaml"
+        if not format_path.is_file():
+            raise ValueError(f"Missing format configuration: {format_path.relative_to(root)}")
+        try:
+            format_config = yaml.safe_load(format_path.read_text(encoding="utf-8")) or {}
+        except (OSError, yaml.YAMLError) as error:
+            raise ValueError(f"Cannot load {format_name} format configuration {format_path}: {error}") from error
+        if not isinstance(format_config, dict):
+            raise ValueError(f"{format_name} format configuration must contain a YAML mapping: {format_path}")
+        reference_doc = format_config.get("reference-doc")
+        if reference_doc:
+            _validate_resource(root, reference_doc, f"{format_name} reference document")
+        css_paths = format_config.get("css", [])
+        if isinstance(css_paths, str):
+            css_paths = [css_paths]
+        if not isinstance(css_paths, list):
+            raise ValueError(f"{format_name} CSS must be a path or list of paths")
+        for rel in css_paths:
+            _validate_resource(root, rel, f"{format_name} stylesheet")
     if profile_config.get("latex-engine", "lualatex") not in {"pdflatex", "lualatex", "xelatex"}:
         raise ValueError("Unsupported LaTeX engine in profile")
     processor = profile_config.get("bibliography", {}).get("processor", "citeproc")

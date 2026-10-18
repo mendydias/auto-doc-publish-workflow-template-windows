@@ -17,9 +17,9 @@ from .resolve_document import resolve_document
 FORMATS = ("pdf", "latex", "docx", "html", "epub")
 
 
-def _command(args: list[str], cwd: Path) -> int:
+def _command(args: list[str], cwd: Path, env: dict[str, str] | None = None) -> int:
     try:
-        result = subprocess.run(args, cwd=cwd, check=False)
+        result = subprocess.run(args, cwd=cwd, env=env, check=False)
         return result.returncode
     except OSError as error:
         print(f"Cannot start {args[0]}: {error}", file=sys.stderr)
@@ -90,7 +90,7 @@ def build(root: Path, document: str, profile: str | None, typography: str | None
         format_defaults = yaml.safe_load((root / "config/formats" / f"{output_format}.yaml").read_text(encoding="utf-8")) or {}
         latex_settings = {**profile_config, **typography_config} if output_format in ("pdf", "latex") else {}
         for key, value in {**format_defaults, **latex_settings}.items():
-            if key in ("from", "to", "standalone", "filters", "pdf-engine", "css", "reference-doc", "epub-chapter-level", "embed-resources", "include-before-body", "include-in-header"):
+            if key in ("from", "to", "standalone", "filters", "pdf-engine", "css", "reference-doc", "epub-chapter-level", "embed-resources", "include-before-body", "include-in-header", "template"):
                 continue
             option = key.replace("_", "-")
             if key == "numbersections":
@@ -108,8 +108,12 @@ def build(root: Path, document: str, profile: str | None, typography: str | None
                 args += ["--variable", f"{key}={value}"]
         if profile == "thesis":
             args += ["--metadata", "chapters=true", "--top-level-division=chapter"]
-            if output_format in ("pdf", "latex"):
-                args += ["--include-in-header", str(root / "templates/latex/thesis-header.tex")]
+        if output_format in ("pdf", "latex"):
+            for include_key, option in (("include-before-body", "--include-before-body"), ("include-in-header", "--include-in-header")):
+                includes = profile_config.get(include_key, [])
+                if isinstance(includes, str):
+                    includes = [includes]
+                args.extend(item for include in includes for item in (option, str(root / include)))
         if output_format == "docx":
             reference_doc = format_defaults.get("reference-doc", "templates/docx/reference.docx")
             args += ["--reference-doc", str(root / reference_doc)]
@@ -136,6 +140,8 @@ def build(root: Path, document: str, profile: str | None, typography: str | None
         metadata_file = output_dir / "pandoc-metadata.yaml"
         metadata_file.write_text(yaml.safe_dump(metadata, allow_unicode=True, sort_keys=False), encoding="utf-8")
         args += ["--metadata-file", str(metadata_file)]
+        if output_format in ("pdf", "latex") and profile_config.get("template"):
+            args += ["--template", str(root / profile_config["template"])]
         if bibliography:
             for bibliography_path in bibliography:
                 args += ["--bibliography", str(root / bibliography_path)]
@@ -239,8 +245,11 @@ def _build_ieee(root: Path, resolved: dict, format_name: str, shared_defaults: d
     result = _command(args, root)
     if result or format_name == "latex":
         return result
-    command = [shutil.which("latexmk") or "latexmk", "-pdf", f"-pdflatex={engine} %O %S", "-interaction=nonstopmode", "-halt-on-error", "-file-line-error", f"-outdir={output_dir}", str(output_dir / f"{resolved['output']}.tex")]
-    result = _command(command, root)
+    command = [shutil.which("latexmk") or "latexmk", "-g", "-pdf", f"-pdflatex={engine} %O %S", "-interaction=nonstopmode", "-halt-on-error", "-file-line-error", f"-outdir={output_dir}", str(output_dir / f"{resolved['output']}.tex")]
+    env = os.environ.copy()
+    ieee_classes = str((root / "templates/ieee/upstream").resolve())
+    env["TEXINPUTS"] = ieee_classes + os.pathsep + env.get("TEXINPUTS", "")
+    result = _command(command, root, env=env)
     log_path = output_dir / f"{resolved['output']}.log"
     if not result and log_path.is_file():
         import re

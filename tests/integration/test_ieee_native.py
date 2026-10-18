@@ -26,6 +26,8 @@ def test_ieee_latex_pdf_and_submission_bundle() -> None:
     assert r"\bibliographystyle{templates/ieee/upstream/IEEEtran}" in tex
     assert r"\bibliography{sources/ieee-example/references}" in tex
     assert pdf.is_file()
+    fls = (output / "pdf/ieee-example.fls").read_text(encoding="utf-8")
+    assert str(ROOT / "templates/ieee/upstream/IEEEtran.cls") in fls
 
     assert package(ROOT, "ieee-example", None, None) == 0
     archive = output / "submission/ieee-example-submission.zip"

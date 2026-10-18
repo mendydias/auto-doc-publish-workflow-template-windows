@@ -22,15 +22,15 @@ validation, anonymous-submission review, or cross-platform TeX toolchain
 equivalence. The independent bundle rebuild used the available local Linux
 TeX installation.
 
-## Unified workflow acceptance status
+## Unified publishing acceptance status
 
 The authoring contract and sample `sources/<id>/document.yaml` files are
 consumed by all publishing actions. Unit and integration tests cover discovery,
 numeric section ordering, Unicode filenames, duplicate section numbers,
 traversal, symlink escapes, CLI option precedence, and incremental IEEE
 bibliography edits on Linux. Unified source folders are the only supported
-authoring input. The Windows
-bootstrap and workflow have only been edited and statically inspected here:
+authoring input. The Windows bootstrap has only been edited and statically
+inspected here:
 WinGet package installation, agreements, TeX/font provisioning, setup
-repeatability, actual Windows PowerShell behavior, and GitHub Actions execution
-remain unverified. Do not treat this record as completion of Windows acceptance.
+repeatability, and actual Windows PowerShell behavior remain unverified. Do not
+treat this record as completion of Windows acceptance.

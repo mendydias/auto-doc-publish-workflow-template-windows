@@ -60,7 +60,7 @@ def test_non_pdf_build_does_not_invoke_latex(monkeypatch) -> None:
     monkeypatch.setattr(build_module, "check_dependencies", lambda *_: 0)
     monkeypatch.setattr(build_module, "validate", lambda *_: [])
     invocations = []
-    monkeypatch.setattr(build_module, "_command", lambda args, cwd: (invocations.append(args) or 0))
+    monkeypatch.setattr(build_module, "_command", lambda args, cwd, **kwargs: (invocations.append(args) or 0))
     assert build_module.build(ROOT, "example", "article", "default", "html") == 0
     assert all("latexmk" not in " ".join(args).lower() and "lualatex" not in " ".join(args).lower() for args in invocations)
 
@@ -75,6 +75,33 @@ def test_repeated_build_is_successful_and_semantically_stable() -> None:
     second = artifact.read_text(encoding="utf-8")
     assert "ref-smith2021" in first and "ref-smith2021" in second
     assert "fig:workflow" in first and "fig:workflow" in second
+
+
+def test_thesis_template_edit_is_used_by_next_build(tmp_path: Path) -> None:
+    from tools.publishing.build import build
+
+    if not shutil.which("pandoc"):
+        pytest.skip("Pandoc is unavailable")
+    for directory in ("config", "templates", "sources/thesis", "references"):
+        shutil.copytree(ROOT / directory, tmp_path / directory)
+    header = tmp_path / "templates/latex/thesis-header.tex"
+    output_dir = tmp_path / "build/thesis/thesis/academic/pdf"
+    tex = output_dir / "thesis.tex"
+    pdf = output_dir / "thesis.pdf"
+
+    assert build(tmp_path, "thesis", None, None, "pdf") == 0
+    assert pdf.is_file()
+    assert r"\setlength{\headheight}{14pt}" in tex.read_text(encoding="utf-8")
+    header.write_text(header.read_text(encoding="utf-8").replace("14pt", "9pt"), encoding="utf-8")
+    assert build(tmp_path, "thesis", None, None, "pdf") == 0
+    assert pdf.is_file()
+    rendered = tex.read_text(encoding="utf-8")
+    assert r"\setlength{\headheight}{9pt}" in rendered
+    assert r"\pagestyle{fancy}" in rendered
+    assert r"\pagestyle{plain}" not in rendered
+
+    header.write_text(r"\undefinedthesiscommand", encoding="utf-8")
+    assert build(tmp_path, "thesis", None, None, "pdf") != 0
 
 
 def test_unicode_checkout_and_invocation_from_another_directory(tmp_path: Path) -> None:

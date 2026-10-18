@@ -48,6 +48,7 @@ def test_new_numbered_sections_override_legacy_source_list(tmp_path: Path) -> No
 
 def test_unified_document_builds_without_legacy_manifest_and_owns_defaults(tmp_path: Path, monkeypatch) -> None:
     shutil.copytree(ROOT / "config", tmp_path / "config")
+    shutil.copytree(ROOT / "templates", tmp_path / "templates")
     folder = tmp_path / "sources/new-paper"
     (folder / "sections").mkdir(parents=True)
     (folder / "sections/01-start.md").write_text("A cited work [@new-key].", encoding="utf-8")
@@ -75,10 +76,45 @@ def test_unified_document_builds_without_legacy_manifest_and_owns_defaults(tmp_p
     commands: list[list[str]] = []
     monkeypatch.setattr("tools.publishing.build.validate", lambda *_: [])
     monkeypatch.setattr("tools.publishing.build.check_dependencies", lambda *_: 0)
-    monkeypatch.setattr("tools.publishing.build._command", lambda args, _cwd: commands.append(args) or 0)
+    monkeypatch.setattr("tools.publishing.build._command", lambda args, _cwd, **kwargs: commands.append(args) or 0)
     assert build(tmp_path, "new-paper", None, None, "latex") == 0
     pandoc_args = commands[0]
     assert pandoc_args.count("--bibliography") == 2
     metadata_file = Path(pandoc_args[pandoc_args.index("--metadata-file") + 1])
     assert "Updated Title" in metadata_file.read_text(encoding="utf-8")
     assert "custom-name.tex" in pandoc_args[pandoc_args.index("--output") + 1]
+
+
+def test_configured_template_and_header_are_passed_to_pandoc(tmp_path: Path, monkeypatch) -> None:
+    shutil.copytree(ROOT / "config", tmp_path / "config")
+    shutil.copytree(ROOT / "templates", tmp_path / "templates")
+    shutil.copytree(ROOT / "sources/example", tmp_path / "sources/example")
+    profile = tmp_path / "config/profiles/article.yaml"
+    profile.write_text(
+        profile.read_text(encoding="utf-8")
+        + "template: templates/latex/custom.tex\n"
+        + "include-in-header: [templates/latex/custom-header.tex]\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "templates/latex/custom.tex").write_text("CUSTOM TEMPLATE", encoding="utf-8")
+    header = tmp_path / "templates/latex/custom-header.tex"
+    header.write_text(r"\setlength{\headheight}{9pt}", encoding="utf-8")
+    monkeypatch.setattr("tools.publishing.build.validate", lambda *_: [])
+    monkeypatch.setattr("tools.publishing.build.check_dependencies", lambda *_: 0)
+    commands: list[list[str]] = []
+    monkeypatch.setattr("tools.publishing.build._command", lambda args, *_args, **_kwargs: commands.append(args) or 0)
+
+    assert build(tmp_path, "example", "article", "default", "latex") == 0
+    args = commands[0]
+    assert args[args.index("--template") + 1] == str(tmp_path / "templates/latex/custom.tex")
+    assert str(header) in args
+
+
+def test_missing_profile_include_is_rejected(tmp_path: Path) -> None:
+    shutil.copytree(ROOT / "config", tmp_path / "config")
+    shutil.copytree(ROOT / "templates", tmp_path / "templates")
+    shutil.copytree(ROOT / "sources/thesis", tmp_path / "sources/thesis")
+    profile = tmp_path / "config/profiles/thesis.yaml"
+    profile.write_text(profile.read_text(encoding="utf-8") + "include-before-body: [templates/latex/missing.tex]\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="Missing or unsafe profile include-before-body resource"):
+        resolve_document(tmp_path, "thesis")

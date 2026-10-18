@@ -34,6 +34,16 @@ def test_watch_tracks_unified_sources_without_legacy_manifest(tmp_path: Path) ->
     assert watch_module._snapshot(tmp_path)[source] == (source.stat().st_mtime_ns, source.stat().st_size)
 
 
+def test_watch_tracks_template_edits(tmp_path: Path) -> None:
+    template = tmp_path / "templates/latex/thesis-header.tex"
+    template.parent.mkdir(parents=True)
+    template.write_text(r"\setlength{\headheight}{14pt}", encoding="utf-8")
+    before = watch_module._snapshot(tmp_path, "paper")
+    template.write_text(r"\setlength{\headheight}{9pt}", encoding="utf-8")
+    after = watch_module._snapshot(tmp_path, "paper")
+    assert before != after
+
+
 def test_watch_debounces_until_quiet(monkeypatch, tmp_path: Path) -> None:
     clock = [0.0]
     snapshots = iter([{"source": (2, 1)}, {"source": (2, 1)}, {"source": (2, 1)}, {"source": (2, 1)}])

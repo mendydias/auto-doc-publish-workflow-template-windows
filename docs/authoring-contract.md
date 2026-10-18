@@ -72,8 +72,8 @@ and LaTeX only; unsupported formats fail validation before external tools are
 invoked. Venue rules are optional document defaults or explicit overrides and
 do not change the underlying authoring layout.
 
-The command-line interface and GitHub Actions use the same publishing
-configuration. CLI values override environment values, which override
+The command-line interface uses the same publishing configuration across local
+and unattended runs. CLI values override environment values, which override
 document defaults, which override application defaults. Interactive
 selection is only a local convenience; unattended execution must have
 unambiguous document and template selections and must never prompt.
