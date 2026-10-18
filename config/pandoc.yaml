@@ -1,0 +1,3 @@
+# Shared Pandoc options; format-specific extensions/options live under config/formats/.
+from: markdown+tex_math_dollars+raw_tex+fenced_divs+bracketed_spans
+standalone: true

@@ -31,6 +31,7 @@ def build(root: Path, document: str, profile: str, typography: str, format_name:
     if not manifest_path.is_file():
         raise ValueError(f"Document manifest not found: {manifest_path.relative_to(root)}")
     manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    shared_defaults = yaml.safe_load((root / "config/pandoc.yaml").read_text(encoding="utf-8")) or {}
     profile_config = yaml.safe_load((root / "config/profiles" / f"{profile}.yaml").read_text(encoding="utf-8"))
     typography_config = yaml.safe_load((root / "config/typography" / f"{typography}.yaml").read_text(encoding="utf-8"))
     validate(root, manifest_path)
@@ -46,7 +47,15 @@ def build(root: Path, document: str, profile: str, typography: str, format_name:
         basename = manifest["output"]
         extension = "tex" if output_format == "latex" else output_format
         output = output_dir / f"{basename}.{extension}"
-        args = [shutil.which("pandoc") or "pandoc", *map(str, sources), "--standalone", "--from", "markdown+tex_math_dollars+raw_tex+fenced_divs+bracketed_spans", "--to", "latex" if output_format in ("latex", "pdf") else output_format, "--output", str(output), "--resource-path", str(root)]
+        args = [shutil.which("pandoc") or "pandoc", *map(str, sources)]
+        for key, value in shared_defaults.items():
+            option = key.replace("_", "-")
+            if isinstance(value, bool):
+                if value:
+                    args.append(f"--{option}")
+            else:
+                args += [f"--{option}", str(value)]
+        args += ["--to", "latex" if output_format in ("latex", "pdf") else output_format, "--output", str(output), "--resource-path", str(root)]
         format_defaults = yaml.safe_load((root / "config/formats" / f"{output_format}.yaml").read_text(encoding="utf-8")) or {}
         latex_settings = {**profile_config, **typography_config} if output_format in ("pdf", "latex") else {}
         for key, value in {**format_defaults, **latex_settings}.items():

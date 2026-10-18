@@ -1,2 +1,1 @@
-from: markdown+tex_math_dollars+raw_tex+fenced_divs+bracketed_spans
 reference-doc: templates/docx/reference.docx
