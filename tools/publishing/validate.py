@@ -111,5 +111,14 @@ def lint(root: Path) -> int:
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
+    markdownlint = shutil.which("pymarkdown")
+    if markdownlint:
+        sources = [str(path) for path in sorted((root / "sources").rglob("*.md"))]
+        result = subprocess.run([markdownlint, "scan", "--config", str(root / ".pymarkdown.json"), *sources], cwd=root, check=False)
+        if result.returncode:
+            return result.returncode
+    else:
+        print("Markdown lint unavailable: install the pinned project dev dependencies with scripts/setup.ps1", file=sys.stderr)
+        return 2
     print("Manifest lint passed")
     return 0

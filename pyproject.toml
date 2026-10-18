@@ -10,7 +10,7 @@ requires-python = ">=3.11"
 dependencies = ["PyYAML==6.0.2", "bibtexparser==1.4.3"]
 
 [project.optional-dependencies]
-dev = ["pytest==8.3.5", "ruff==0.9.7", "markdownlint-cli2==0.17.2"]
+dev = ["pytest==8.3.5", "ruff==0.9.7", "pymarkdownlnt==0.9.29"]
 
 [project.scripts]
 academic-publish = "tools.publishing.__main__:main"
