@@ -32,10 +32,6 @@ try {
     if ($unattended -and -not $agreementsAccepted) {
         throw 'Unattended setup requires -AcceptAgreements (or SETUP_ACCEPT_AGREEMENTS=1). No packages were installed.'
     }
-    if ($unattended -and $admin) {
-        throw 'Run unattended setup as a standard user; this script will not install machine-wide packages or elevate.'
-    }
-
     $packages = @(
         @{ Id = 'Python.Python.3.12'; Command = 'python.exe' },
         @{ Id = 'Microsoft.PowerShell'; Command = 'pwsh.exe' },
