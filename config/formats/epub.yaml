@@ -1,0 +1,3 @@
+from: markdown+tex_math_dollars+raw_tex+fenced_divs+bracketed_spans
+css: [templates/html/academic.css]
+epub-chapter-level: 1

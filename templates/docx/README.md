@@ -1,0 +1,1 @@
+`reference.docx` is a maintained Pandoc reference document. Its styles and page layout apply only to DOCX; generate/update it with `pandoc --print-default-data-file reference.docx` if the installed Pandoc supports this command, or create/edit it in Word and commit the intentional asset. A real binary reference file is created during acceptance on Windows when Pandoc is available.
